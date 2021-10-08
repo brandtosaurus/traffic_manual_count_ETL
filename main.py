@@ -10,9 +10,11 @@ from typing import List
 DROP_IF = ["DO NOT FILL IN", "DO NOT F"]
 
 
-class Count:
+class Count(object):
     def __init__(self) -> None:
-        pass
+        self.path = self.gui()
+        self.src = self.getfiles(self.path)
+        self.etl(self.src)
 
     def gui(self):
         root = Tk()
@@ -23,7 +25,7 @@ class Count:
     def getfiles(self, path: str) -> List[str]:
         print("COLLECTING FILES......")
         src = []
-        for root, dirs, files in os.walk(path):
+        for root, dirs, files in os.walk(self.path):
             for name in files:
                 if name.endswith(".xlsx"):
                     p = os.path.join(root, name)
@@ -33,9 +35,9 @@ class Count:
 
     def etl(self, src: List[str]):
         try:
-            for path in src:
+            for file in self.src:
 
-                xls = pd.ExcelFile(path)
+                xls = pd.ExcelFile(file)
 
                 header_out_df = pd.DataFrame(
                     columns=[
@@ -66,7 +68,7 @@ class Count:
                 )
 
                 for sheet in xls.sheet_names:
-                    df = pd.read_excel(path, sheet_name=sheet, header=None)
+                    df = pd.read_excel(file, sheet_name=sheet, header=None)
 
                     header = {
                         "header_id": [str(uuid.uuid4())],
@@ -123,10 +125,9 @@ class Count:
                     mode="a",
                 )
         except Exception:
-            print(path)
+            print(file)
 
 
 if __name__ == "__main__":
-    filesToDo = Count.gui()
-    filesToDo = Count.getfiles(filesToDo)
-    Count.etl(filesToDo)
+    Count()
+    print("COMPLETED")
