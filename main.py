@@ -116,9 +116,9 @@ class Count(object):
                     # TODO: make sure the below works
                     data['light'] = data['light'].diff().fillna(data['light'])
                     data['heavy'] = data['heavy'].diff().fillna(data['heavy'])
-                    data['bus'] = data['bus'].diff().fillna(data['heavy'])
-                    data['taxi'] = data['taxi'].diff().fillna(data['heavy'])
-                    data['total'] = data['total'].diff().fillna(data['heavy'])
+                    data['bus'] = data['bus'].diff().fillna(data['bus'])
+                    data['taxi'] = data['taxi'].diff().fillna(data['taxi'])
+                    data['total'] = data['total'].diff().fillna(data['total'])
 
                     data_out_df = data_out_df.append(data)
 
