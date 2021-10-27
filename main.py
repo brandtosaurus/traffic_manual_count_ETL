@@ -1,8 +1,6 @@
 import pandas as pd
-import openpyxl
 import os
 import uuid
-from datetime import datetime
 from tkinter import filedialog
 from tkinter import *
 from typing import List
@@ -114,6 +112,14 @@ class Count(object):
 
                     data["header_date"] = header_temp.loc[0, "count_date_start"]
 
+                    # TODO: process data so that count is only for that hour (not cumulative)
+                    # TODO: make sure the below works
+                    data['light'] = data['light'].diff().fillna(data['light'])
+                    data['heavy'] = data['heavy'].diff().fillna(data['heavy'])
+                    data['bus'] = data['bus'].diff().fillna(data['heavy'])
+                    data['taxi'] = data['taxi'].diff().fillna(data['heavy'])
+                    data['total'] = data['total'].diff().fillna(data['heavy'])
+
                     data_out_df = data_out_df.append(data)
 
                 header_out_df.to_csv(
@@ -126,8 +132,7 @@ class Count(object):
                 )
         except Exception:
             print(file)
-
-
+    
 if __name__ == "__main__":
     Count()
     print("COMPLETED")
