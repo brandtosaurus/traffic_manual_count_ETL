@@ -5,9 +5,8 @@ import uuid
 from tkinter import filedialog
 from tkinter import *
 from typing import List
-from pandas.core.frame import DataFrame
 
-from scipy.stats import kstest
+# from scipy.stats import kstest
 
 import config
 
