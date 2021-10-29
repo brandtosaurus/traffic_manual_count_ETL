@@ -5,21 +5,16 @@ import uuid
 from tkinter import filedialog
 from tkinter import *
 from typing import List
+from pandas.core.frame import DataFrame
+
+from scipy.stats import kstest
 
 import config
 
 DROP_IF = ["DO NOT FILL IN", "DO NOT F"]
 
 
-class Count(object):
-    def __init__(self) -> None:
-        self.type, self.path = self.gui()
-        self.src = self.getfiles(self.path)
-        if self.type == "Cumulative Count":
-            self.cumulative_etl(self.src)
-        elif self.type == "TCS Trust":
-            self.tcs_etl
-
+class Gui(object):
     def gui(self):
         f = ""
 
@@ -43,7 +38,23 @@ class Count(object):
 
         return drop, str(f)
 
-    def getfiles(self, path: str) -> List[str]:
+
+class Count(object):
+    def __init__(self, type, path) -> None:
+        self.header_out_df = pd.DataFrame(columns=config.HEADER)
+        self.data_out_df = pd.DataFrame(columns=config.DATA)
+        self.type = type
+        self.path = path
+        self.src = self.getfiles(self.path)
+
+    def run(self):
+        if self.type == "Cumulative Count":
+            self.cumulative_etl(self.src)
+        elif self.type == "TCS Trust":
+            self.tcs_etl(self.src)
+        return self.header_out_df, self.data_out_df
+
+    def getfiles(self: str) -> List[str]:
         print("COLLECTING FILES......")
         src = []
         for root, dirs, files in os.walk(self.path):
@@ -54,21 +65,36 @@ class Count(object):
         src = list(set(src))
         return src
 
-    def cumulative_etl(self, src: List[str]) -> pd.DataFrame:
-        self.src = self.getfiles(self.path)
+    # TODO: process data so that count is only for that hour (not cumulative)
+    # TODO: make sure the below works
+    def hourly_count_calc(self, data):
+        data["light"] = data["light"].diff().fillna(data["light"])
+        data["heavy"] = data["heavy"].diff().fillna(data["heavy"])
+        data["bus"] = data["bus"].diff().fillna(data["bus"])
+        data["taxi"] = data["taxi"].diff().fillna(data["taxi"])
+        data["total"] = data["total"].diff().fillna(data["total"])
+        return data
+
+    def check_if_calculated(self, data):
+        a = data["total"]
+        normalized_df = (a - a.min()) / (a.max() - a.min())
+        if (normalized_df.head(1).all() == 0.0) & (normalized_df.tail(1).all() == 1):
+            return self.hourly_count_calc(data)
+        else:
+            return data
+
+    def cumulative_etl(self) -> pd.DataFrame:
         try:
             for file in self.src:
 
                 xls = pd.ExcelFile(file)
-
-                header_out_df = pd.DataFrame()
-                data_out_df = pd.DataFrame()
 
                 for sheet in xls.sheet_names:
                     df = pd.read_excel(file, sheet_name=sheet, header=None)
 
                     header = {
                         "header_id": [str(uuid.uuid4())],
+                        "document_url": file,
                         "counted_by": ["CKDM"],
                         "tc_station_name": [df.loc[0, 1]],
                         "count_type_id": 3,
@@ -79,7 +105,10 @@ class Count(object):
                         "count_interval": [60],
                     }
                     header_temp = pd.DataFrame(header)
-                    header_out_df = header_out_df.append(header_temp)
+                    self.header_out_df = self.header_out_df.merge(
+                        header_temp, how="outer"
+                    )
+                    self.header_out_df = self.header_out_df.drop_duplicates()
 
                     data = df.loc[6:24, 0:5]
                     data.dropna
@@ -111,24 +140,9 @@ class Count(object):
 
                     data["header_date"] = header_temp.loc[0, "count_date_start"]
 
-                    # TODO: process data so that count is only for that hour (not cumulative)
-                    # TODO: make sure the below works
-                    data["light"] = data["light"].diff().fillna(data["light"])
-                    data["heavy"] = data["heavy"].diff().fillna(data["heavy"])
-                    data["bus"] = data["bus"].diff().fillna(data["bus"])
-                    data["taxi"] = data["taxi"].diff().fillna(data["taxi"])
-                    data["total"] = data["total"].diff().fillna(data["total"])
-
-                    data_out_df = data_out_df.append(data)
-
-                    header_out_df.to_csv(
-                        config.HEADEROUT,
-                        mode="a",
-                    )
-                    data_out_df.to_csv(
-                        config.DATAOUT,
-                        mode="a",
-                    )
+                    data = self.check_if_calculated(data)
+                    self.data_out_df = self.data_out_df.merge(data, how="outer")
+                    self.data_out_df = self.data_out_df.drop_duplicates()
 
         except Exception:
             with open(
@@ -140,8 +154,7 @@ class Count(object):
                 write.writerows([[file]])
             pass
 
-    def tcs_etl(self, src: List[str]) -> pd.DataFrame:
-        self.src = self.getfiles(self.path)
+    def tcs_etl(self) -> pd.DataFrame:
         try:
             for file in self.src:
 
@@ -155,6 +168,7 @@ class Count(object):
 
                     header = {
                         "header_id": [str(uuid.uuid4())],
+                        "document_url": file,
                         "counted_by": ["TCS Trust"],
                         "tc_station_name": [str(df.loc[4, 8]) + str(df.loc[5, 8])],
                         "count_type_id": 3,
@@ -183,8 +197,10 @@ class Count(object):
                         "no_days": [df.loc[25, 8]],
                     }
                     header_temp = pd.DataFrame(header)
-                    header_out_df = header_out_df.append(header_temp)
-                    header_out_df = header_out_df.drop_duplicates()
+                    self.header_out_df = self.header_out_df.merge(
+                        header_temp, how="outer"
+                    )
+                    self.header_out_df = self.header_out_df.drop_duplicates()
 
                     data = df.loc[4:29, 0:5]
                     data = data[(data[0] != "Subtotal A") & (data[0] != "Subtotal B")]
@@ -214,17 +230,10 @@ class Count(object):
                     ) + pd.to_timedelta(hour)
 
                     data["header_date"] = header_temp.loc[0, "count_date_start"]
-                    data_out_df = data_out_df.append(data)
-                    data_out_df = data_out_df.drop_duplicates()
 
-                    header_out_df.to_csv(
-                        config.HEADEROUT,
-                        mode="a",
-                    )
-                    data_out_df.to_csv(
-                        config.DATAOUT,
-                        mode="a",
-                    )
+                    data = self.check_if_calculated(data)
+                    self.data_out_df = self.data_out_df.merge(data, how="outer")
+                    self.data_out_df = self.data_out_df.drop_duplicates()
 
         except Exception:
             with open(
@@ -250,15 +259,19 @@ if __name__ == "__main__":
     if not os.path.exists(os.path.expanduser(config.OUTPATH)):
         os.makedirs(os.path.expanduser(config.OUTPATH))
 
-    Count()
+    gui = Gui()
+    type, dir = gui.gui()
 
-    # header.to_csv(
-    #     config.HEADEROUT,
-    #     mode="a",
-    # )
-    # data.to_csv(
-    #     config.DATAOUT,
-    #     mode="a",
-    # )
+    c = Count(type, dir)
+    header, data = c.run()
+
+    header.to_csv(
+        config.HEADEROUT,
+        mode="a",
+    )
+    data.to_csv(
+        config.DATAOUT,
+        mode="a",
+    )
 
     print("COMPLETED")
