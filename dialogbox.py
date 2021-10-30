@@ -1,24 +1,42 @@
-from PyQt5 import QtCore, QtGui, QtWidgets , uic
+from PyQt5.QtCore import *
+from PyQt5.QtGui import QPixmap, QMouseEvent
+from PyQt5 import QtWidgets, uic
 import sys
+
+TYPES = ["TCS Trust", "Basic Format"]
+
 
 class Ui(QtWidgets.QDialog):
     def __init__(self):
         super(Ui, self).__init__()
-        uic.loadUi('manualcount.ui', self)
 
-        self.count_type =  
+        uic.loadUi("manualcount.ui", self)
 
-        TYPES =  ['TCS Trust', 'Cumulative Count']
-        self.dropdown = self.findChild(QtWidgets.QComboBox, 'comboBox')
-        self.dropdown.addItems(TYPES)
-        self.dropdown.activated[str].connect(self.onActivated)
+        self.typeComboBox.addItems(TYPES)
+        self.typeComboBox.activated[str].connect(self.activated)
 
-        self.show()
+        self.tchTrustImageExample.setPixmap(QPixmap(r"assets\tcstrust_example.png"))
+        self.tchTrustImageExample.mousePressEvent.connect(self.activated)
 
-    def onActivated(self, text):
-        self.count_type.setText(text)
+        self.simpleImportExample.setPixmap(QPixmap(r"assets\simpleImport_example.png"))
+        self.simpleImportExample.mousePressEvent.connect(self.activated)
 
-if __name__=="__main__":
+        self.chooseDirectory.clicked.connect(self._open_file_dialog)
+
+    def activated(self, text):
+        if self == self.tchTrustImageExample:
+            self.type = "TCS Trust"
+        elif self == self.simpleImportExample:
+            self.type = "Basic Format"
+
+    def _open_file_dialog(self):
+        directory = str(QtWidgets.QFileDialog.getExistingDirectory())
+        self.textBar.setText("{}".format(directory))
+
+
+if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(False)
     window = Ui()
-    app.exec_()
+    window.show()
+    sys.exit(app.exec_())

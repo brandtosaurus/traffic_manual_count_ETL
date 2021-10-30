@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="image">
+    <file>simpleImport_example.png</file>
+    <file>tcstrust_example.png</file>
+  </qresource>
+</RCC>
