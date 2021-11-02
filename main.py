@@ -14,28 +14,34 @@ DROP_IF = ["DO NOT FILL IN", "DO NOT F"]
 
 
 class Gui(object):
-    def gui(self):
-        f = ""
+    def __init__(self) -> None:
+        super().__init__()
 
+    def gui(self):
         def select_folder():
-            f = filedialog.askdirectory()
+            self.path = filedialog.askdirectory()
             root.destroy()
+
+        def display_selected(choice):
+            self.choice = menu.get()
 
         root = Tk()
         root.geometry("400x150+100+100")
         root.title("Manual Count Data Import")
 
-        menu = StringVar()
+        OPTIONS = ["Basic Format", "TCS Trust"]
+
+        menu = StringVar(root)
         menu.set("Select Count Type")
-        drop = OptionMenu(root, menu, "Cumulative Count", "TCS Trust")
-        drop.pack()
+        self.drop = OptionMenu(root, menu, *OPTIONS, command=display_selected)
+        self.drop.pack()
 
         button1 = Button(root, text="Select Folder", command=select_folder)
         button1.pack()
 
         root.mainloop()
 
-        return drop, str(f)
+        return self.choice, self.path
 
 
 class Count(object):
@@ -44,21 +50,21 @@ class Count(object):
         self.data_out_df = pd.DataFrame(columns=config.DATA)
         self.type = type
         self.path = path
-        self.src = self.getfiles(self.path)
+        self.src = self.getfiles()
 
     def run(self):
-        if self.type == "Cumulative Count":
+        if self.type == "Basic Format":
             self.cumulative_etl(self.src)
         elif self.type == "TCS Trust":
             self.tcs_etl(self.src)
         return self.header_out_df, self.data_out_df
 
-    def getfiles(self: str) -> List[str]:
+    def getfiles(self) -> List[str]:
         print("COLLECTING FILES......")
         src = []
         for root, dirs, files in os.walk(self.path):
             for name in files:
-                if name.endswith(".xlsx"):
+                if name.endswith(".xlsx") or name.endswith(".csv"):
                     p = os.path.join(root, name)
                     src.append(p)
         src = list(set(src))
@@ -253,15 +259,12 @@ class Count(object):
             return repr(self)
 
 
-if __name__ == "__main__":
-
+def main():
     if not os.path.exists(os.path.expanduser(config.OUTPATH)):
         os.makedirs(os.path.expanduser(config.OUTPATH))
 
-    gui = Gui()
-    type, dir = gui.gui()
-
-    c = Count(type, dir)
+    g = Gui().gui()
+    c = Count(g[0], g[1])
     header, data = c.run()
 
     header.to_csv(
@@ -274,3 +277,7 @@ if __name__ == "__main__":
     )
 
     print("COMPLETED")
+
+
+# if __name__ == "__main__":
+#     main()

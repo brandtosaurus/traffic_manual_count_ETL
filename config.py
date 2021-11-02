@@ -6,7 +6,7 @@ DATAOUT = r"~\Desktop\Temp\manual_traffic_counts\header_import.csv"
 PROBLEM_FILES = r"~\Desktop\Temp\manual_traffic_counts\PROBLEM_FILES.csv"
 
 ENGINE = create_engine(
-    "postgresql,//postgres,Lin3@r1in3!431@linearline.dedicated.co.za,5432/gauteng"
+    r"postgresql://postgres:Lin3@r1in3!431@linearline.dedicated.co.za:5432/gauteng"
 )
 
 HEADER = [
