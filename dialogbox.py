@@ -1,6 +1,13 @@
 from PyQt5.QtCore import *
 from PyQt5.QtGui import QPixmap
-from PyQt5 import QtWidgets, uic
+from PyQt5.QtWidgets import (
+    QApplication,
+    QDialog,
+    QMessageBox,
+    QErrorMessage,
+    QFileDialog,
+)
+from PyQt5 import uic
 import sys
 import csv
 import os
@@ -11,7 +18,7 @@ import config
 TYPES = ["", "TCS Trust", "Basic Format"]
 
 
-class Ui(QtWidgets.QDialog):
+class Ui(QDialog):
     def __init__(self):
         super(Ui, self).__init__()
 
@@ -50,7 +57,7 @@ class Ui(QtWidgets.QDialog):
         Ui.type = str(self.typeComboBox.currentText())
 
     def _open_file_dialog(self):
-        path = str(QtWidgets.QFileDialog.getExistingDirectory())
+        path = str(QFileDialog.getExistingDirectory())
         self.textBar.setText("{}".format(path))
         Ui.path = self.textBar.text()
 
@@ -59,30 +66,34 @@ class Ui(QtWidgets.QDialog):
 
     def run(self):
         if (Ui.type == "") or (Ui.type == None):
-            self.error_dialogue = QtWidgets.QErrorMessage()
+            self.error_dialogue = QErrorMessage()
             self.error_dialogue.showMessage("Please select a type")
         elif (Ui.path == "") or (Ui.path == None):
-            self.error_dialogue = QtWidgets.QErrorMessage()
+            self.error_dialogue = QErrorMessage()
             self.error_dialogue.showMessage("Please select a folder")
         else:
-            self.calc = External()
-            self.calc.countChanged.connect(self.onCountChanged)
-            self.calc.start()
+            self.thread = External()
+            self.thread.countChanged.connect(self.onCountChanged)
+            self.thread.start()
             self.runButton.setEnabled(False)
+            self.thread.finished.connect(self.show_popup)
 
     def onCountChanged(self, value):
         self.progressBar.setValue(value)
 
-    def app_done(self):
-        self.msg = QtWidgets.QMessageBox()
-        self.msg.setIcon(QMessageBox.Information)
-        self.msg.setText("Process")
-        self.msg.setInformativeText("Processing Complete")
-        self.msg.setStandardButtons(QMessageBox.Ok)
-        self.msg.buttonClicked.connect(msgbtn)
+    def show_popup(self):
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Information)
+        msg.setWindowText("Process")
+        msg.setText("Processing Complete")
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.buttonClicked.connect(self.popup_button)
 
-    def msgbtn(self):
-        sys.exit()
+    def popup_button(self, i):
+        if i.text() == "OK":
+            sys.exit()
+        else:
+            sys.exit()
 
 
 class External(QThread):
@@ -91,36 +102,19 @@ class External(QThread):
 
     def run(self):
         p = main.Count(str(Ui.type), str(Ui.path))
-        TOTAL = len(p.src)
-        src = p.src
-        print(TOTAL)
+        src = p.getfiles(Ui.path)
+        TOTAL = len(src)
         count = 0
-        while count <= TOTAL:
-            # ! DUPLICATE OUTPUTS
-            # TODO: Almost works, remove duplicate outputs
-            try:
-                for file in src:
-                    count += 1
-                    p.run(file)
-                    self.countChanged.emit(int(count / TOTAL * 100))
-            except Exception:
-                with open(
-                    os.path.expanduser(config.PROBLEM_FILES),
-                    "a",
-                    newline="",
-                ) as f:
-                    write = csv.writer(f)
-                    write.writerows([[file]])
-                pass
-        header = p.header_out_df.drop_duplicates()
-        data = p.data_out_df.drop_duplicates()
-        header.to_csv(config.HEADEROUT, mode="a", index=False)
-        data.to_csv(config.DATAOUT, mode="a", index=False)
-        Ui.app_done()
+        # while count <= TOTAL:
+            # for file in src:
+            #     count += 1
+        p.execute(src)
+            # self.countChanged.emit(int(count / TOTAL * 100))
+        p.export()
 
 
 if __name__ == "__main__":
-    app = QtWidgets.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
     window = Ui()
     window.show()

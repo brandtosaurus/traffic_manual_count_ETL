@@ -1,8 +1,11 @@
 import pandas as pd
 import os
 import uuid
-from tkinter import filedialog
-from tkinter import *
+import csv
+
+# from tkinter import filedialog
+# from tkinter import *
+
 from typing import List
 
 # from scipy.stats import kstest
@@ -12,35 +15,35 @@ import config
 DROP_IF = ["DO NOT FILL IN", "DO NOT F"]
 
 
-class Gui(object):
-    def __init__(self) -> None:
-        super().__init__()
+# class Gui(object):
+#     def __init__(self) -> None:
+#         super().__init__()
 
-    def gui(self):
-        def select_folder():
-            self.path = filedialog.askdirectory()
-            root.destroy()
+#     def gui(self):
+#         def select_folder():
+#             self.path = filedialog.askdirectory()
+#             root.destroy()
 
-        def display_selected(choice):
-            self.choice = menu.get()
+#         def display_selected(choice):
+#             self.choice = menu.get()
 
-        root = Tk()
-        root.geometry("400x150+100+100")
-        root.title("Manual Count Data Import")
+#         root = Tk()
+#         root.geometry("400x150+100+100")
+#         root.title("Manual Count Data Import")
 
-        OPTIONS = ["Basic Format", "TCS Trust"]
+#         OPTIONS = ["Basic Format", "TCS Trust"]
 
-        menu = StringVar(root)
-        menu.set("Select Count Type")
-        self.drop = OptionMenu(root, menu, *OPTIONS, command=display_selected)
-        self.drop.pack()
+#         menu = StringVar(root)
+#         menu.set("Select Count Type")
+#         self.drop = OptionMenu(root, menu, *OPTIONS, command=display_selected)
+#         self.drop.pack()
 
-        button1 = Button(root, text="Select Folder", command=select_folder)
-        button1.pack()
+#         button1 = Button(root, text="Select Folder", command=select_folder)
+#         button1.pack()
 
-        root.mainloop()
+#         root.mainloop()
 
-        return self.choice, self.path
+#         return self.choice, self.path
 
 
 class Count(object):
@@ -49,18 +52,17 @@ class Count(object):
         self.data_out_df = pd.DataFrame(columns=config.DATA)
         self.type = type
         self.path = path
-        self.src = self.getfiles()
 
-    def run(self, file):
+    def choose(self, df, file):
         if self.type == "Basic Format":
-            self.cumulative_etl(file)
+            self.cumulative_etl(df, file)
         elif self.type == "TCS Trust":
-            self.tcs_etl(file)
+            self.tcs_etl(df, file)
 
-    def getfiles(self) -> List[str]:
+    def getfiles(self, path) -> List[str]:
         print("COLLECTING FILES......")
         src = []
-        for root, dirs, files in os.walk(self.path):
+        for root, dirs, files in os.walk(path):
             for name in files:
                 if name.endswith(".xlsx") or name.endswith(".csv"):
                     p = os.path.join(root, name)
@@ -86,157 +88,182 @@ class Count(object):
         else:
             return data
 
-    def cumulative_etl(self, file) -> pd.DataFrame:
+    def cumulative_etl(self, df, file) -> pd.DataFrame:
 
-        xls = pd.ExcelFile(file)
+        ## UNCOMMENT THIS WHEN WORKING WITH FILES
+        # xls = pd.ExcelFile(file)
+        # df = pd.read_excel(file, sheet_name=xls.sheet_names, header=None)
+        # for key, df in df.items():
 
-        for sheet in xls.sheet_names:
-            df = pd.read_excel(file, sheet_name=sheet, header=None)
+        header = {
+            "header_id": [str(uuid.uuid4())],
+            "document_url": file,
+            "counted_by": ["CKDM"],
+            "tc_station_name": [df.loc[0, 1]],
+            "count_type_id": 3,
+            "count_date_start": [df.loc[1, 1]],
+            "count_weather": [df.loc[2, 1]],
+            "h_station_date": [df.loc[0, 1] + "_" + str(df.loc[1, 1])],
+            "growth_rate_use": [str("y")],
+            "count_interval": [60],
+        }
+        header_temp = pd.DataFrame(header)
+        self.header_out_df = self.header_out_df.merge(header_temp, how="outer")
+        # self.header_out_df = self.header_out_df.drop_duplicates()
 
-            header = {
-                "header_id": [str(uuid.uuid4())],
-                "document_url": file,
-                "counted_by": ["CKDM"],
-                "tc_station_name": [df.loc[0, 1]],
-                "count_type_id": 3,
-                "count_date_start": [df.loc[1, 1]],
-                "count_weather": [df.loc[2, 1]],
-                "h_station_date": [df.loc[0, 1] + "_" + str(df.loc[1, 1])],
-                "growth_rate_use": [str("y")],
-                "count_interval": [60],
-            }
-            header_temp = pd.DataFrame(header)
-            self.header_out_df = self.header_out_df.merge(header_temp, how="outer")
-            # self.header_out_df = self.header_out_df.drop_duplicates()
+        data = df.loc[6:24, 0:5]
+        data.dropna(thresh=5)
+        data.rename(
+            columns={
+                0: "count_hour",
+                1: "light",
+                2: "heavy",
+                3: "bus",
+                4: "taxi",
+                5: "total",
+            },
+            inplace=True,
+        )
 
-            data = df.loc[6:24, 0:5]
-            data.dropna(thresh=5)
-            data.rename(
-                columns={
-                    0: "count_hour",
-                    1: "light",
-                    2: "heavy",
-                    3: "bus",
-                    4: "taxi",
-                    5: "total",
-                },
-                inplace=True,
-            )
+        data = data[data.count_hour.isin(DROP_IF) == False]
 
-            data = data[data.count_hour.isin(DROP_IF) == False]
+        data["header_id"] = header_temp.loc[0, "header_id"]
 
-            data["header_id"] = header_temp.loc[0, "header_id"]
+        data["count_hour"] = pd.to_datetime(
+            data["count_hour"].str[:8], format="%H:%M:%S"
+        ).dt.time
 
-            data["count_hour"] = pd.to_datetime(
-                data["count_hour"].str[:8], format="%H:%M:%S"
-            ).dt.time
+        hour = data["count_hour"].astype(str)
+        data["count_time"] = header_temp.loc[0, "count_date_start"]
+        data["count_time"] = pd.to_datetime(
+            data["count_time"], format="%y/%m/%d"
+        ) + pd.to_timedelta(hour)
 
-            hour = data["count_hour"].astype(str)
-            data["count_time"] = header_temp.loc[0, "count_date_start"]
-            data["count_time"] = pd.to_datetime(
-                data["count_time"], format="%y/%m/%d"
-            ) + pd.to_timedelta(hour)
+        data["header_date"] = header_temp.loc[0, "count_date_start"]
 
-            data["header_date"] = header_temp.loc[0, "count_date_start"]
+        data = self.check_if_calculated(data)
+        self.data_out_df = self.data_out_df.merge(data, how="outer")
+        self.data_out_df = self.data_out_df.drop_duplicates()
 
-            data = self.check_if_calculated(data)
-            self.data_out_df = self.data_out_df.merge(data, how="outer")
-            # self.data_out_df = self.data_out_df.drop_duplicates()
+    def tcs_etl(self, df, file) -> pd.DataFrame:
 
-    def tcs_etl(self, file) -> pd.DataFrame:
+        ## UNCOMMENT THIS WHEN WORKING WITH FILES
+        # xls = pd.ExcelFile(file)
+        # df = pd.read_excel(file, sheet_name=xls.sheet_names, header=None)
+        # for key, df in df.items():
 
-        xls = pd.ExcelFile(file)
+        header = {
+            "header_id": [str(uuid.uuid4())],
+            "document_url": file,
+            "counted_by": ["TCS Trust"],
+            "tc_station_name": [str(df.loc[4, 8]) + str(df.loc[5, 8])],
+            "count_type_id": 3,
+            "count_date_start": [df.loc[2, 1]],
+            "count_weather": [df.loc[1, 2]],
+            "h_station_date": [
+                str(df.loc[4, 8]) + str(df.loc[5, 8]) + "_" + str(df.loc[2, 1])
+            ],
+            "growth_rate_use": [str("y")],
+            "count_interval": [60],
+            "latitude": [df.loc[14, 8]],
+            "longitude": [df.loc[15, 8]],
+            "kilometer_dist": [df.loc[8, 8]],
+            "road_link": [df.loc[6, 8]],
+            "type_of_count": [df.loc[13, 8]],
+            "description": [
+                "Between " + str(df.loc[9, 8]) + " and " + str(df.loc[10, 8])
+            ],
+            "no_of_hours": [df.loc[24, 8]],
+            "no_days": [df.loc[25, 8]],
+        }
+        header_temp = pd.DataFrame(header)
+        self.header_out_df = self.header_out_df.merge(header_temp, how="outer")
+        # self.header_out_df = self.header_out_df.drop_duplicates()
 
-        for sheet in xls.sheet_names:
-            df = pd.read_excel(file, sheet_name=sheet, header=None)
+        data = df.loc[4:29, 0:5]
+        data = data[(data[0] != "Subtotal A") & (data[0] != "Subtotal B")]
+        data = data.dropna(thresh=5)
+        data.rename(
+            columns={
+                0: "count_hour",
+                1: "light",
+                2: "heavy",
+                3: "bus",
+                4: "taxi",
+                5: "total",
+            },
+            inplace=True,
+        )
+        data["count_hour"] = data["count_hour"].str[:2]
+        data["header_id"] = header_temp.loc[0, "header_id"]
 
-            header = {
-                "header_id": [str(uuid.uuid4())],
-                "document_url": file,
-                "counted_by": ["TCS Trust"],
-                "tc_station_name": [str(df.loc[4, 8]) + str(df.loc[5, 8])],
-                "count_type_id": 3,
-                "count_date_start": [df.loc[2, 1]],
-                "count_weather": [df.loc[1, 2]],
-                "h_station_date": [
-                    str(df.loc[4, 8]) + str(df.loc[5, 8]) + "_" + str(df.loc[2, 1])
-                ],
-                "growth_rate_use": [str("y")],
-                "count_interval": [60],
-                "latitude": [df.loc[14, 8]],
-                "longitude": [df.loc[15, 8]],
-                "kilometer_dist": [df.loc[8, 8]],
-                "road_link": [df.loc[6, 8]],
-                "type_of_count": [df.loc[13, 8]],
-                "description": [
-                    "Between " + str(df.loc[9, 8]) + " and " + str(df.loc[10, 8])
-                ],
-                "no_of_hours": [df.loc[24, 8]],
-                "no_days": [df.loc[25, 8]],
-            }
-            header_temp = pd.DataFrame(header)
-            self.header_out_df = self.header_out_df.merge(header_temp, how="outer")
-            # self.header_out_df = self.header_out_df.drop_duplicates()
+        data["count_hour"] = pd.to_datetime(
+            data["count_hour"].str[:8], format="%H"
+        ).dt.time
 
-            data = df.loc[4:29, 0:5]
-            data = data[(data[0] != "Subtotal A") & (data[0] != "Subtotal B")]
-            data = data.dropna(thresh=5)
-            data.rename(
-                columns={
-                    0: "count_hour",
-                    1: "light",
-                    2: "heavy",
-                    3: "bus",
-                    4: "taxi",
-                    5: "total",
-                },
-                inplace=True,
-            )
-            data["count_hour"] = data["count_hour"].str[:2]
-            data["header_id"] = header_temp.loc[0, "header_id"]
+        hour = data["count_hour"].astype(str)
+        data["count_time"] = header_temp.loc[0, "count_date_start"]
+        data["count_time"] = pd.to_datetime(
+            data["count_time"], format="%y/%m/%d"
+        ) + pd.to_timedelta(hour)
 
-            data["count_hour"] = pd.to_datetime(
-                data["count_hour"].str[:8], format="%H"
-            ).dt.time
+        data["header_date"] = header_temp.loc[0, "count_date_start"]
 
-            hour = data["count_hour"].astype(str)
-            data["count_time"] = header_temp.loc[0, "count_date_start"]
-            data["count_time"] = pd.to_datetime(
-                data["count_time"], format="%y/%m/%d"
-            ) + pd.to_timedelta(hour)
+        data = self.check_if_calculated(data)
+        self.data_out_df = self.data_out_df.merge(data, how="outer")
+        # self.data_out_df = self.data_out_df.drop_duplicates()
 
-            data["header_date"] = header_temp.loc[0, "count_date_start"]
+    def execute(self, file):
+        if not os.path.exists(os.path.expanduser(config.OUTPATH)):
+            os.makedirs(os.path.expanduser(config.OUTPATH))
 
-            data = self.check_if_calculated(data)
-            self.data_out_df = self.data_out_df.merge(data, how="outer")
-            # self.data_out_df = self.data_out_df.drop_duplicates()
-
-    def __repr__(self) -> str:
+            # for file in src:
         try:
-            return repr(self.df)
+            df = pd.read_excel(file, sheet_name=None, header=None)
+            for key, df in df.items():
+                self.choose(df, file)
         except Exception:
-            return repr(self)
+            with open(
+                os.path.expanduser(config.PROBLEM_FILES),
+                "a",
+                newline="",
+            ) as f:
+                write = csv.writer(f)
+                write.writerows([[file]])
+            pass
+
+    def export(self):
+        self.header_out_df = self.header_out_df.drop_duplicates()
+        self.data_out_df = self.data_out_df.drop_duplicates()
+        self.header_out_df.to_csv(config.HEADEROUT, mode="a", index=False)
+        self.data_out_df.to_csv(config.DATAOUT, mode="a", index=False)
 
 
-def main():
-    if not os.path.exists(os.path.expanduser(config.OUTPATH)):
-        os.makedirs(os.path.expanduser(config.OUTPATH))
+# def execute(type, path):
+#     if not os.path.exists(os.path.expanduser(config.OUTPATH)):
+#         os.makedirs(os.path.expanduser(config.OUTPATH))
 
-    g = Gui().gui()
-    c = Count(g[0], g[1])
-    c.run()
+#     # ONLY UNCOMMENT THIS IF INTENDING TO MAKE IT SIMPLER
+#     # g = Gui().gui()
+#     # type = g[0]
+#     # path = g[1]
 
-    header.to_csv(
-        config.HEADEROUT,
-        mode="a",
-    )
-    data.to_csv(
-        config.DATAOUT,
-        mode="a",
-    )
+#     c = Count(type, path)
+#     df_list = c.df_list(c.src)
+#     for df in df_list:
+#         c.run(df)
 
-    print("COMPLETED")
+#     c.header_out_df.to_csv(
+#         config.HEADEROUT,
+#         mode="a",
+#     )
+#     c.data_out_df.to_csv(
+#         config.DATAOUT,
+#         mode="a",
+#     )
+
+#     print("COMPLETED")
 
 
 # if __name__ == "__main__":
-#     main()
+#     execute()
