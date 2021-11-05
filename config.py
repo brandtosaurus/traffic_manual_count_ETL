@@ -2,12 +2,51 @@ from sqlalchemy import create_engine
 
 OUTPATH = r"~\Desktop\Temp\manual_traffic_counts"
 HEADEROUT = r"~\Desktop\Temp\manual_traffic_counts\header_import.csv"
-DATAOUT = r"~\Desktop\Temp\manual_traffic_counts\header_import.csv"
+DATAOUT = r"~\Desktop\Temp\manual_traffic_counts\data_import.csv"
 PROBLEM_FILES = r"~\Desktop\Temp\manual_traffic_counts\PROBLEM_FILES.csv"
 
 ENGINE = create_engine(
     r"postgresql://postgres:Lin3@r1in3!431@linearline.dedicated.co.za:5432/gauteng"
 )
+
+SITE = [
+    "id",
+    "roadlink_id",
+    "node_id",
+    "leg_id",
+    "tcname",
+    "description",
+    "count_station_type_id",
+    "count_cycle_id",
+    "axle_group_id",
+    "congestion_group_id",
+    "growth_group_id",
+    "traffic_type_id",
+    "publictrans_group_id",
+    "geom",
+    "assoc_station_name" "lane1_description",
+    "lane2_description",
+    "lane3_description",
+    "lane4_description",
+    "lane5_description",
+    "lane6_description",
+    "lane7_description",
+    "lane8_description",
+    "max_speed",
+    "location",
+    "lane1_dir",
+    "lane2_dir",
+    "lane3_dir",
+    "lane4_dir",
+    "lane5_dir",
+    "lane6_dir",
+    "lane7_dir",
+    "lane8_dir",
+    "owner",
+    "alternative_tcnames",
+    "latitude",
+    "longitude",
+]
 
 HEADER = [
     "header_id",
@@ -37,7 +76,7 @@ DATA = [
     "bus",
     "taxi",
     "total",
-    "header_time",
+    # "header_time",
     "header_date",
     "count_time",
     "header_id",

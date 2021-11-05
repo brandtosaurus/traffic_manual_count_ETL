@@ -1,19 +1,17 @@
 from PyQt5.QtCore import *
-from PyQt5.QtGui import QPixmap, QMouseEvent, QMessageBox
+from PyQt5.QtGui import QPixmap
 from PyQt5 import QtWidgets, uic
 import sys
-import time
+import csv
+import os
 
 import main
+import config
 
 TYPES = ["", "TCS Trust", "Basic Format"]
 
 
 class Ui(QtWidgets.QDialog):
-
-    type = ""
-    path = ""
-
     def __init__(self):
         super(Ui, self).__init__()
 
@@ -36,7 +34,7 @@ class Ui(QtWidgets.QDialog):
 
         self.buttonBox.rejected.connect(self.exit)
 
-        # self.progressBar.setValue()
+        self.progressBar.setValue(0)
 
     def activated(self, text):
         if text == "TCS Trust":
@@ -60,8 +58,6 @@ class Ui(QtWidgets.QDialog):
         sys.exit(app.exec_())
 
     def run(self):
-        type = str(self.typeComboBox.currentText())
-        path = self.textBar.text()
         if (Ui.type == "") or (Ui.type == None):
             self.error_dialogue = QtWidgets.QErrorMessage()
             self.error_dialogue.showMessage("Please select a type")
@@ -69,7 +65,6 @@ class Ui(QtWidgets.QDialog):
             self.error_dialogue = QtWidgets.QErrorMessage()
             self.error_dialogue.showMessage("Please select a folder")
         else:
-            # ! fix this!!
             self.calc = External()
             self.calc.countChanged.connect(self.onCountChanged)
             self.calc.start()
@@ -79,7 +74,7 @@ class Ui(QtWidgets.QDialog):
         self.progressBar.setValue(value)
 
     def app_done(self):
-        self.msg = QMessageBox()
+        self.msg = QtWidgets.QMessageBox()
         self.msg.setIcon(QMessageBox.Information)
         self.msg.setText("Process")
         self.msg.setInformativeText("Processing Complete")
@@ -97,15 +92,31 @@ class External(QThread):
     def run(self):
         p = main.Count(str(Ui.type), str(Ui.path))
         TOTAL = len(p.src)
+        src = p.src
         print(TOTAL)
         count = 0
         while count <= TOTAL:
-            # TODO: complete this so it works
-            for file in p.src:
-                print(file)
-
-                count += 1
-                self.countChanged.emit(count)
+            # ! DUPLICATE OUTPUTS
+            # TODO: Almost works, remove duplicate outputs
+            try:
+                for file in src:
+                    count += 1
+                    p.run(file)
+                    self.countChanged.emit(int(count / TOTAL * 100))
+            except Exception:
+                with open(
+                    os.path.expanduser(config.PROBLEM_FILES),
+                    "a",
+                    newline="",
+                ) as f:
+                    write = csv.writer(f)
+                    write.writerows([[file]])
+                pass
+        header = p.header_out_df.drop_duplicates()
+        data = p.data_out_df.drop_duplicates()
+        header.to_csv(config.HEADEROUT, mode="a", index=False)
+        data.to_csv(config.DATAOUT, mode="a", index=False)
+        Ui.app_done()
 
 
 if __name__ == "__main__":
