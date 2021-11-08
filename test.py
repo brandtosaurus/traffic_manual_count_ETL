@@ -41,10 +41,12 @@ def run():
     src = p.getfiles(path)
     TOTAL = len(src)
     count = 0
-    # while count <= TOTAL:
-        # for file in src:
-        #     count += 1
-    p.execute(src)
+    while count < TOTAL:
+        for file in src:
+            count += 1
+            print(file)
+            p.execute(file)
+            print(count, '  of  ',TOTAL)
         # self.countChanged.emit(int(count / TOTAL * 100))
     p.export()
 

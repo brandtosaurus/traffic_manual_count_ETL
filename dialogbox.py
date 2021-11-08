@@ -9,7 +9,6 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5 import uic
 import sys
-import csv
 import os
 
 import main
@@ -37,7 +36,7 @@ class Ui(QDialog):
 
         self.chooseDirectory.clicked.connect(self._open_file_dialog)
 
-        self.runButton.clicked.connect(self.run)
+        self.runButton.clicked.connect(self.start)
 
         self.buttonBox.rejected.connect(self.exit)
 
@@ -64,7 +63,7 @@ class Ui(QDialog):
     def exit(self):
         sys.exit(app.exec_())
 
-    def run(self):
+    def start(self):
         if (Ui.type == "") or (Ui.type == None):
             self.error_dialogue = QErrorMessage()
             self.error_dialogue.showMessage("Please select a type")
@@ -86,14 +85,21 @@ class Ui(QDialog):
         msg.setIcon(QMessageBox.Information)
         msg.setWindowText("Process")
         msg.setText("Processing Complete")
-        msg.setStandardButtons(QMessageBox.Ok)
+        msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Open)
         msg.buttonClicked.connect(self.popup_button)
 
-    def popup_button(self, i):
-        if i.text() == "OK":
+        returnValue = msg.exec()
+        if returnValue == QMessageBox.Ok:
             sys.exit()
         else:
-            sys.exit()
+            OUTPATH = os.path.realpath(config.OUTPATH)
+            os.startfile(OUTPATH)
+
+    # def popup_button(self, i):
+    #     if i.text() == "OK":
+    #         sys.exit()
+    #     else:
+    #         sys.exit()
 
 
 class External(QThread):
@@ -105,11 +111,11 @@ class External(QThread):
         src = p.getfiles(Ui.path)
         TOTAL = len(src)
         count = 0
-        # while count <= TOTAL:
-            # for file in src:
-            #     count += 1
-        p.execute(src)
-            # self.countChanged.emit(int(count / TOTAL * 100))
+        while count < TOTAL:
+            for file in src:
+                count += 1
+                p.execute(file)
+                self.countChanged.emit(int(count / TOTAL * 100))
         p.export()
 
 

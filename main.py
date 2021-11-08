@@ -215,24 +215,24 @@ class Count(object):
         self.data_out_df = self.data_out_df.merge(data, how="outer")
         # self.data_out_df = self.data_out_df.drop_duplicates()
 
-    def execute(self, path):
+    def execute(self, file):
         if not os.path.exists(os.path.expanduser(config.OUTPATH)):
             os.makedirs(os.path.expanduser(config.OUTPATH))
 
-        for file in path:
-            try:
-                df = pd.read_excel(file, sheet_name=None, header=None)
-                for key, df in df.items():
-                    self.choose(df, file)
-            except Exception:
-                with open(
-                    os.path.expanduser(config.PROBLEM_FILES),
-                    "a",
-                    newline="",
-                ) as f:
-                    write = csv.writer(f)
-                    write.writerows([[file]])
-                pass
+        # for file in path:
+        try:
+            df = pd.read_excel(file, sheet_name=None, header=None)
+            for key, df in df.items():
+                self.choose(df, file)
+        except Exception:
+            with open(
+                os.path.expanduser(config.PROBLEM_FILES),
+                "a",
+                newline="",
+            ) as f:
+                write = csv.writer(f)
+                write.writerows([[file]])
+            pass
 
     def export(self):
         self.header_out_df = self.header_out_df.drop_duplicates()
