@@ -72,8 +72,7 @@ class Count(object):
         src = list(set(src))
         return src
 
-    # TODO: process data so that count is only for that hour (not cumulative)
-    # TODO: make sure the below works
+    # ! process data so that count is only for that hour (not cumulative)
     def hourly_count_calc(self, data):
         data["light"] = data["light"].diff().fillna(data["light"])
         data["heavy"] = data["heavy"].diff().fillna(data["heavy"])
@@ -180,7 +179,6 @@ class Count(object):
         }
         header_temp = pd.DataFrame(header)
         self.header_out_df = self.header_out_df.merge(header_temp, how="outer")
-        # self.header_out_df = self.header_out_df.drop_duplicates()
 
         data = df.loc[4:29, 0:5]
         data = data[(data[0] != "Subtotal A") & (data[0] != "Subtotal B")]
@@ -213,7 +211,6 @@ class Count(object):
 
         data = self.check_if_calculated(data)
         self.data_out_df = self.data_out_df.merge(data, how="outer")
-        # self.data_out_df = self.data_out_df.drop_duplicates()
 
     def execute(self, file):
         if not os.path.exists(os.path.expanduser(config.OUTPATH)):
@@ -237,34 +234,18 @@ class Count(object):
     def export(self):
         self.header_out_df = self.header_out_df.drop_duplicates()
         self.data_out_df = self.data_out_df.drop_duplicates()
+
+        # EXPORT AS CSV TO CHECK DATA
         self.header_out_df.to_csv(config.HEADEROUT, mode="a", index=False)
         self.data_out_df.to_csv(config.DATAOUT, mode="a", index=False)
 
+        # EXPORT INTO TEMP TABLE IF NEEDED BEFORE INSERTING TO MAIN TABLE
+        # self.header_out_df.to_sql("temp_manual_count_header", config.ENGINE, schema='trafc', if_exists='replace')
+        # self.header_out_df.to_sql("temp_manual_count_data", config.ENGINE, schema='trafc', if_exists='replace')
 
-# def execute(type, path):
-#     if not os.path.exists(os.path.expanduser(config.OUTPATH)):
-#         os.makedirs(os.path.expanduser(config.OUTPATH))
-
-#     # ONLY UNCOMMENT THIS IF INTENDING TO MAKE IT SIMPLER
-#     # g = Gui().gui()
-#     # type = g[0]
-#     # path = g[1]
-
-#     c = Count(type, path)
-#     df_list = c.df_list(c.src)
-#     for df in df_list:
-#         c.run(df)
-
-#     c.header_out_df.to_csv(
-#         config.HEADEROUT,
-#         mode="a",
-#     )
-#     c.data_out_df.to_csv(
-#         config.DATAOUT,
-#         mode="a",
-#     )
-
-#     print("COMPLETED")
+        # EXPORT INTO MAIN TABLE
+        # self.header_out_df.to_sql("manual_count_header", config.ENGINE, schema='trafc', if_exists='append', index=False)
+        # self.header_out_df.to_sql("manual_count_data", config.ENGINE, schema='trafc', if_exists='append', index=False)
 
 
 # if __name__ == "__main__":
