@@ -22,10 +22,6 @@ p= main.Count(type,path)
 # data_out_df = p.data_out_df.drop_duplicates()
 # print(p.header_out_df)
 # print(p.data_out_df)
-# header_out_df.to_csv(
-#         config.HEADEROUT,
-#         mode="a",index=False
-#     )
 # data_out_df.to_csv(
 #     config.DATAOUT,
 #     mode="a",index=False
@@ -33,10 +29,26 @@ p= main.Count(type,path)
 
 # print("COMPLETED")
 
-c = main.Count(type, path)
-pth = c.getfiles(c.path)
-# df_list = c.df_list(c.getfiles(c.path))
-p.execute(pth)
+# c = main.Count(type, path)
+# pth = c.getfiles(c.path)
+# # df_list = c.df_list(c.getfiles(c.path))
+# p.execute(pth)
+# print(p.header_out_df)
+# p.export()
+
+def run():
+    p = main.Count(str(type), str(path))
+    src = p.getfiles(path)
+    TOTAL = len(src)
+    count = 0
+    # while count <= TOTAL:
+        # for file in src:
+        #     count += 1
+    p.execute(src)
+        # self.countChanged.emit(int(count / TOTAL * 100))
+    p.export()
+
+run()
 
 
 # df_list = list()
