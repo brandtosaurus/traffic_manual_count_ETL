@@ -1,7 +1,9 @@
 import pandas as pd
 import os
 import uuid
+
 import csv
+from io import StringIO
 
 from datetime import datetime
 
@@ -166,12 +168,10 @@ class Count(object):
                 },
                 inplace=True,
             )
-            # ! GET TIME TO DATETIME
             data["count_hour"] = data["count_hour"].str[:2]
             data["h_station_date"] = header_temp.loc[0, "h_station_date"]
             data["tcname"] = header_temp.loc[0, "tc_station_name"]
 
-            # ! GET TIME TO DATETIME
             # data["count_hour"] = pd.to_datetime(
             #     data["count_hour"].str[:8], format="%H"
             # ).dt.time
@@ -224,6 +224,35 @@ class Count(object):
                 write.writerows([[file]])
             pass
 
+    def psql_insert_copy(self, table, conn, keys, data_iter):
+        """
+        Execute SQL statement inserting data
+
+        Parameters
+        ----------
+        table : pandas.io.sql.SQLTable
+        conn : sqlalchemy.engine.Engine or sqlalchemy.engine.Connection
+        keys : list of str
+            Column names
+        data_iter : Iterable that iterates the values to be inserted
+        """
+        # gets a DBAPI connection that can provide a cursor
+        dbapi_conn = conn.connection
+        with dbapi_conn.cursor() as cur:
+            s_buf = StringIO()
+            writer = csv.writer(s_buf)
+            writer.writerows(data_iter)
+            s_buf.seek(0)
+
+            columns = ", ".join('"{}"'.format(k) for k in keys)
+            if table.schema:
+                table_name = "{}.{}".format(table.schema, table.name)
+            else:
+                table_name = table.name
+
+            sql = "COPY {} ({}) FROM STDIN WITH CSV".format(table_name, columns)
+            cur.copy_expert(sql=sql, file=s_buf)
+
     def export(self):
         self.header_out_df = self.header_out_df.drop_duplicates()
         self.data_out_df = self.data_out_df.drop_duplicates()
@@ -246,41 +275,61 @@ class Count(object):
             )
 
             # EXPORT AS CSV TO CHECK DATA
-            # self.header_out_df.to_csv(config.HEADEROUT, mode="a", index=False)
-            # self.data_out_df.to_csv(config.DATAOUT, mode="a", index=False)
+            self.header_out_df.to_csv(config.HEADEROUT, mode="a", index=False)
+            self.data_out_df.to_csv(config.DATAOUT, mode="a", index=False)
 
             ## EXPORT INTO TEMP TABLE IF NEEDED BEFORE INSERTING TO MAIN TABLE
-            self.header_out_df.to_sql(
-                "temp_manual_count_header",
-                config.ENGINE,
-                schema="trafc",
-                if_exists="replace",
-                index=False,
-            )
-            self.data_out_df.to_sql(
-                "temp_manual_count_data",
-                config.ENGINE,
-                schema="trafc",
-                if_exists="replace",
-                index=False,
-            )
+            # self.header_out_df.to_sql(
+            #     "temp_manual_count_header",
+            #     config.ENGINE,
+            #     schema="trafc",
+            #     if_exists="replace",
+            #     index=False,
+            # )
+            # self.data_out_df.to_sql(
+            #     "temp_manual_count_data",
+            #     config.ENGINE,
+            #     schema="trafc",
+            #     if_exists="replace",
+            #     index=False,
+            # )
 
             ## EXPORT INTO MAIN TABLE
+            self.header_out_df.to_sql(
+                "manual_count_header",
+                config.ENGINE,
+                schema="trafc",
+                if_exists="append",
+                index=False,
+                method="multi",
+            )
+            self.data_out_df.to_sql(
+                "manual_count_data",
+                config.ENGINE,
+                schema="trafc",
+                if_exists="append",
+                index=False,
+                method="multi",
+            )
+
+            # ## EXPORT INTO MAIN TABLE FASTER METHOD
             # self.header_out_df.to_sql(
             #     "manual_count_header",
             #     config.ENGINE,
             #     schema="trafc",
             #     if_exists="append",
-            #     index=False
+            #     index=False,
+            #     method=self.psql_insert_copy
             # )
-
             # self.data_out_df.to_sql(
             #     "manual_count_data",
             #     config.ENGINE,
             #     schema="trafc",
             #     if_exists="append",
-            #     index=False
+            #     index=False,
+            #     method=self.psql_insert_copy
             # )
+
             print("DONE")
         except Exception:
             print("something went wrong")
