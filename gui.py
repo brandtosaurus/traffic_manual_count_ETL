@@ -14,7 +14,7 @@ import os
 import main
 import config
 
-TYPES = ["", "TCS Trust", "Basic Format"]
+TYPES = ["", "Detailed Manual Traffic Count Form", "Basic Format"]
 
 
 class Ui(QDialog):
@@ -43,7 +43,7 @@ class Ui(QDialog):
         self.progressBar.setValue(0)
 
     def activated(self, text):
-        if text == "TCS Trust":
+        if text == "Detailed Manual Traffic Count Form":
             self.tchTrustImageExample.setStyleSheet(
                 "background-color: cyan; border: 3px solid red;"
             )

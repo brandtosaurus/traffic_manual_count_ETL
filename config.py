@@ -4,14 +4,13 @@ OUTPATH = r"~\Desktop\Temp\manual_traffic_counts"
 HEADEROUT = r"~\Desktop\Temp\manual_traffic_counts\header_import.csv"
 DATAOUT = r"~\Desktop\Temp\manual_traffic_counts\data_import.csv"
 PROBLEM_FILES = r"~\Desktop\Temp\manual_traffic_counts\PROBLEM_FILES.csv"
+DROP_IF = ["DO NOT FILL IN", "DO NOT F"]
 
 ENGINE = create_engine(
     r"postgresql://postgres:Lin3@r1in3!431@linearline.dedicated.co.za:5432/gauteng"
 )
 
 SITE = [
-    "id",
-    "roadlink_id",
     "node_id",
     "leg_id",
     "tcname",
@@ -24,26 +23,9 @@ SITE = [
     "traffic_type_id",
     "publictrans_group_id",
     "geom",
-    "assoc_station_name" "lane1_description",
-    "lane2_description",
-    "lane3_description",
-    "lane4_description",
-    "lane5_description",
-    "lane6_description",
-    "lane7_description",
-    "lane8_description",
     "max_speed",
     "location",
-    "lane1_dir",
-    "lane2_dir",
-    "lane3_dir",
-    "lane4_dir",
-    "lane5_dir",
-    "lane6_dir",
-    "lane7_dir",
-    "lane8_dir",
     "owner",
-    "alternative_tcnames",
     "latitude",
     "longitude",
 ]
@@ -65,7 +47,7 @@ HEADER = [
     "road_link",
     "type_of_count",
     "description",
-    "no_of_hours",
+    "count_duration_hours",
     "no_days",
 ]
 
@@ -80,6 +62,8 @@ DATA = [
     "header_date",
     "count_time",
     "header_id",
+    "h_station_date",
+    "tcname"
 ]
 
 KS_SAMPLE = [56, 247, 357, 481, 606, 738, 865, 1009, 1225, 1402, 1602, 1762]
