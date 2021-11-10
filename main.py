@@ -192,6 +192,10 @@ class Count(object):
             data = self.check_if_calculated(data)
 
             header_temp["count_duration_hours"] = data["total"].notnull().sum()
+            if header_temp["count_duration_hours"] == 18:
+                data["count_type_id"] = 4
+            else:
+                pass
 
             self.header_out_df = self.header_out_df.merge(header_temp, how="outer")
             self.data_out_df = self.data_out_df.merge(data, how="outer")
@@ -295,31 +299,13 @@ class Count(object):
             # )
 
             ## EXPORT INTO MAIN TABLE
-            self.header_out_df.to_sql(
-                "manual_count_header",
-                config.ENGINE,
-                schema="trafc",
-                if_exists="append",
-                index=False,
-                method="multi",
-            )
-            self.data_out_df.to_sql(
-                "manual_count_data",
-                config.ENGINE,
-                schema="trafc",
-                if_exists="append",
-                index=False,
-                method="multi",
-            )
-
-            # ## EXPORT INTO MAIN TABLE FASTER METHOD
             # self.header_out_df.to_sql(
             #     "manual_count_header",
             #     config.ENGINE,
             #     schema="trafc",
             #     if_exists="append",
             #     index=False,
-            #     method=self.psql_insert_copy
+            #     method="multi",
             # )
             # self.data_out_df.to_sql(
             #     "manual_count_data",
@@ -327,8 +313,26 @@ class Count(object):
             #     schema="trafc",
             #     if_exists="append",
             #     index=False,
-            #     method=self.psql_insert_copy
+            #     method="multi",
             # )
+
+            # ## EXPORT INTO MAIN TABLE FASTER METHOD
+            self.header_out_df.to_sql(
+                "manual_count_header",
+                config.ENGINE,
+                schema="trafc",
+                if_exists="append",
+                index=False,
+                method=self.psql_insert_copy,
+            )
+            self.data_out_df.to_sql(
+                "manual_count_data",
+                config.ENGINE,
+                schema="trafc",
+                if_exists="append",
+                index=False,
+                method=self.psql_insert_copy,
+            )
 
             print("DONE")
         except Exception:
