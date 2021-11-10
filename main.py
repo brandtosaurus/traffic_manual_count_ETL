@@ -127,15 +127,23 @@ class Count(object):
         # for key, df in df.items():
 
         if df.loc[0, 0] == "MANUAL TRAFFIC COUNTING SHEET":
+
+            if pd.isnull(df.loc[23, 8]):
+                weather = 'sunny'
+            else:
+                weather = df.loc[23, 8]
+
+            uuid = str(uuid.uuid4())
+
             header = {
-                "header_id": [str(uuid.uuid4())],
+                "header_id": [uuid],
                 "document_url": file,
                 "counted_by": ["Detailed Manual Traffic Count Form"],
                 "tc_station_name": [str(df.loc[4, 8]) + str(df.loc[5, 8])],
                 "count_type_id": 3,
                 "count_date_start": [df.loc[2, 1]],
-                "count_weather": [df.loc[1, 2]],
-                "h_station_date": [str(uuid.uuid4())],
+                "count_weather": [weather],
+                "h_station_date": [uuid],
                 # [
                 #     str(df.loc[4, 8]) + str(df.loc[5, 8]) + "_" + str(df.loc[2, 1])
                 # ],
@@ -192,7 +200,7 @@ class Count(object):
             data = self.check_if_calculated(data)
 
             header_temp["count_duration_hours"] = data["total"].notnull().sum()
-            if header_temp["count_duration_hours"] == 18:
+            if header_temp["count_duration_hours"].any() == 18:
                 data["count_type_id"] = 4
             else:
                 pass
@@ -299,31 +307,13 @@ class Count(object):
             # )
 
             ## EXPORT INTO MAIN TABLE
-            # self.header_out_df.to_sql(
-            #     "manual_count_header",
-            #     config.ENGINE,
-            #     schema="trafc",
-            #     if_exists="append",
-            #     index=False,
-            #     method="multi",
-            # )
-            # self.data_out_df.to_sql(
-            #     "manual_count_data",
-            #     config.ENGINE,
-            #     schema="trafc",
-            #     if_exists="append",
-            #     index=False,
-            #     method="multi",
-            # )
-
-            # ## EXPORT INTO MAIN TABLE FASTER METHOD
             self.header_out_df.to_sql(
                 "manual_count_header",
                 config.ENGINE,
                 schema="trafc",
                 if_exists="append",
                 index=False,
-                method=self.psql_insert_copy,
+                method="multi",
             )
             self.data_out_df.to_sql(
                 "manual_count_data",
@@ -331,8 +321,26 @@ class Count(object):
                 schema="trafc",
                 if_exists="append",
                 index=False,
-                method=self.psql_insert_copy,
+                method="multi",
             )
+
+            # ## EXPORT INTO MAIN TABLE FASTER METHOD
+            # self.header_out_df.to_sql(
+            #     "manual_count_header",
+            #     config.ENGINE,
+            #     schema="trafc",
+            #     if_exists="append",
+            #     index=False,
+            #     method=self.psql_insert_copy,
+            # )
+            # self.data_out_df.to_sql(
+            #     "manual_count_data",
+            #     config.ENGINE,
+            #     schema="trafc",
+            #     if_exists="append",
+            #     index=False,
+            #     method=self.psql_insert_copy,
+            # )
 
             print("DONE")
         except Exception:
