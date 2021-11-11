@@ -7,6 +7,8 @@ from io import StringIO
 
 from datetime import datetime
 
+# from psycopg2 import Error
+
 # from tkinter import filedialog
 # from tkinter import *
 
@@ -129,25 +131,25 @@ class Count(object):
         if df.loc[0, 0] == "MANUAL TRAFFIC COUNTING SHEET":
 
             if pd.isnull(df.loc[23, 8]):
-                weather = 'sunny'
+                weather = "sunny"
             else:
                 weather = df.loc[23, 8]
 
-            uuid = str(uuid.uuid4())
+            gid = str(uuid.uuid4())
 
             header = {
-                "header_id": [uuid],
+                "header_id": [gid],
                 "document_url": file,
                 "counted_by": ["Detailed Manual Traffic Count Form"],
                 "tc_station_name": [str(df.loc[4, 8]) + str(df.loc[5, 8])],
                 "count_type_id": 3,
                 "count_date_start": [df.loc[2, 1]],
                 "count_weather": [weather],
-                "h_station_date": [uuid],
+                "h_station_date": [gid],
                 # [
                 #     str(df.loc[4, 8]) + str(df.loc[5, 8]) + "_" + str(df.loc[2, 1])
                 # ],
-                "growth_rate_use": [str("y")],
+                "growth_rate_use": [str("Y")],
                 "count_interval": [60],
                 "latitude": [df.loc[14, 8]],
                 "longitude": [df.loc[15, 8]],
@@ -221,6 +223,7 @@ class Count(object):
         if not os.path.exists(os.path.expanduser(config.OUTPATH)):
             os.makedirs(os.path.expanduser(config.OUTPATH))
 
+        # TODO: add sheet name to problem files output
         # for file in path:
         try:
             df = pd.read_excel(file, sheet_name=None, header=None)
@@ -265,6 +268,19 @@ class Count(object):
             sql = "COPY {} ({}) FROM STDIN WITH CSV".format(table_name, columns)
             cur.copy_expert(sql=sql, file=s_buf)
 
+    # def refresh_mv(self):
+    #     try:
+    #         cursor = config.CONN.cursor()
+    #         cursor.execute(config.REFRESH_MATERIALIZED_VIEWS)
+    #         config.CONN.commit()
+    #     except (Exception, Error) as error:
+    #         print("Error while connecting to PostgreSQL", error)
+    #     finally:
+    #         if config.CONN:
+    #             cursor.close()
+    #             config.CONN.close()
+    #             print("PostgreSQL connection is closed")
+
     def export(self):
         self.header_out_df = self.header_out_df.drop_duplicates()
         self.data_out_df = self.data_out_df.drop_duplicates()
@@ -282,13 +298,9 @@ class Count(object):
                     "no_days",
                 ]
             )
-            self.data_out_df = self.data_out_df.drop(
-                columns=["header_date", "count_time", "header_id"]
-            )
 
             # EXPORT AS CSV TO CHECK DATA
             self.header_out_df.to_csv(config.HEADEROUT, mode="a", index=False)
-            self.data_out_df.to_csv(config.DATAOUT, mode="a", index=False)
 
             ## EXPORT INTO TEMP TABLE IF NEEDED BEFORE INSERTING TO MAIN TABLE
             # self.header_out_df.to_sql(
@@ -298,6 +310,43 @@ class Count(object):
             #     if_exists="replace",
             #     index=False,
             # )
+
+            ## EXPORT INTO MAIN TABLE
+            # self.header_out_df.to_sql(
+            #     "manual_count_header",
+            #     config.ENGINE,
+            #     schema="trafc",
+            #     if_exists="append",
+            #     index=False,
+            # )
+
+            # ## EXPORT INTO MAIN TABLE FASTER METHOD
+            self.header_out_df.to_sql(
+                "manual_count_header",
+                config.ENGINE,
+                schema="trafc",
+                if_exists="append",
+                index=False,
+                method=self.psql_insert_copy,
+            )
+
+            print("HEADER DONE")
+        except Exception:
+            print(
+                """something went wrong with the header: please check if the data is in the database 
+                or something on the database side. check the triggers on the manual_count_data table"""
+            )
+            pass
+
+        try:
+            self.data_out_df = self.data_out_df.drop(
+                columns=["header_date", "count_time", "header_id"]
+            )
+
+            # EXPORT AS CSV TO CHECK DATA
+            self.data_out_df.to_csv(config.DATAOUT, mode="a", index=False)
+
+            ## EXPORT INTO TEMP TABLE IF NEEDED BEFORE INSERTING TO MAIN TABLE
             # self.data_out_df.to_sql(
             #     "temp_manual_count_data",
             #     config.ENGINE,
@@ -307,44 +356,30 @@ class Count(object):
             # )
 
             ## EXPORT INTO MAIN TABLE
-            self.header_out_df.to_sql(
-                "manual_count_header",
-                config.ENGINE,
-                schema="trafc",
-                if_exists="append",
-                index=False,
-                method="multi",
-            )
-            self.data_out_df.to_sql(
-                "manual_count_data",
-                config.ENGINE,
-                schema="trafc",
-                if_exists="append",
-                index=False,
-                method="multi",
-            )
-
-            # ## EXPORT INTO MAIN TABLE FASTER METHOD
-            # self.header_out_df.to_sql(
-            #     "manual_count_header",
-            #     config.ENGINE,
-            #     schema="trafc",
-            #     if_exists="append",
-            #     index=False,
-            #     method=self.psql_insert_copy,
-            # )
             # self.data_out_df.to_sql(
             #     "manual_count_data",
             #     config.ENGINE,
             #     schema="trafc",
             #     if_exists="append",
             #     index=False,
-            #     method=self.psql_insert_copy,
             # )
 
-            print("DONE")
+            # ## EXPORT INTO MAIN TABLE FASTER METHOD
+            self.data_out_df.to_sql(
+                "manual_count_data",
+                config.ENGINE,
+                schema="trafc",
+                if_exists="append",
+                index=False,
+                method=self.psql_insert_copy,
+            )
+
+            print("DATA DONE")
         except Exception:
-            print("something went wrong")
+            print(
+                """something went wrongwith the DATA: please check if the data is in the database 
+                or something on the database side. check the triggers on the manual_count_data table"""
+            )
             pass
 
 

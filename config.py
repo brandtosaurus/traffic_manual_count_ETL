@@ -1,4 +1,6 @@
 from sqlalchemy import create_engine
+from psycopg2 import connect, sql
+
 
 OUTPATH = r"~\Desktop\Temp\manual_traffic_counts"
 HEADEROUT = r"~\Desktop\Temp\manual_traffic_counts\header_import.csv"
@@ -9,6 +11,50 @@ DROP_IF = ["DO NOT FILL IN", "DO NOT F"]
 ENGINE = create_engine(
     r"postgresql://postgres:Lin3@r1in3!431@linearline.dedicated.co.za:5432/gauteng"
 )
+
+REFRESH_MATERIALIZED_VIEWS = """
+DROP INDEX IF EXISTS trafc.vw_detailed_manualcount_sheet_district_n_idx;
+DROP INDEX IF EXISTS trafc.vw_detailed_manualcount_sheet_id_idx;
+DROP INDEX IF EXISTS trafc.vw_detailed_manualcount_sheet_road_link_idx;
+DROP INDEX IF EXISTS trafc.vw_detailed_manualcount_sheet_tcname_idx;
+DROP INDEX IF EXISTS trafc.vw_detailed_manualcount_sheet_year_idx;
+DROP INDEX IF EXISTS trafc.vw_detailed_manualcount_sheet_yearonly_idx;
+DROP INDEX IF EXISTS trafc.vw_detailed_manualcount_uix;
+
+DROP INDEX trafc.vw_summary_manualcount_sheet_district_n_idx;
+DROP INDEX trafc.vw_summary_manualcount_sheet_id_idx;
+DROP INDEX trafc.vw_summary_manualcount_sheet_road_link_idx;
+DROP INDEX trafc.vw_summary_manualcount_sheet_tcname_idx;
+DROP INDEX trafc.vw_summary_manualcount_sheet_year_idx;
+DROP INDEX trafc.vw_summary_manualcount_sheet_yearonly_idx;
+
+REFRESH MATERIALIZED VIEW trafc.vw_detailed_manualcount_sheet WITH DATA;
+REFRESH MATERIALIZED VIEW trafc.vw_summary_manualcount_sheet WITH DATA;
+REFRESH MATERIALIZED VIEW trafc.station_total_s WITH DATA;
+
+CREATE INDEX IF NOT EXISTS vw_detailed_manualcount_sheet_district_n_idx ON trafc.vw_detailed_manualcount_sheet USING btree ("District_n");
+CREATE INDEX IF NOT EXISTS vw_detailed_manualcount_sheet_id_idx ON trafc.vw_detailed_manualcount_sheet USING btree (id);
+CREATE INDEX IF NOT EXISTS vw_detailed_manualcount_sheet_road_link_idx ON trafc.vw_detailed_manualcount_sheet USING btree (road_link);
+CREATE INDEX IF NOT EXISTS vw_detailed_manualcount_sheet_tcname_idx ON trafc.vw_detailed_manualcount_sheet USING btree (tcname);
+CREATE INDEX IF NOT EXISTS vw_detailed_manualcount_sheet_year_idx ON trafc.vw_detailed_manualcount_sheet USING btree (year, depot, proc_road, "Count Type", tcname);
+CREATE INDEX IF NOT EXISTS vw_detailed_manualcount_sheet_yearonly_idx ON trafc.vw_detailed_manualcount_sheet USING btree (year);
+CREATE UNIQUE INDEX IF NOT EXISTS vw_detailed_manualcount_uix ON trafc.vw_detailed_manualcount_sheet USING btree (tcname, count_hour);
+
+CREATE INDEX IF NOT EXISTS vw_summary_manualcount_sheet_district_n_idx ON trafc.vw_summary_manualcount_sheet USING btree ("District_n");
+CREATE INDEX IF NOT EXISTS vw_summary_manualcount_sheet_id_idx ON trafc.vw_summary_manualcount_sheet USING btree (id);
+CREATE INDEX IF NOT EXISTS vw_summary_manualcount_sheet_road_link_idx ON trafc.vw_summary_manualcount_sheet USING btree (road_link);
+CREATE INDEX IF NOT EXISTS vw_summary_manualcount_sheet_tcname_idx ON trafc.vw_summary_manualcount_sheet USING btree (tcname);
+CREATE INDEX IF NOT EXISTS vw_summary_manualcount_sheet_year_idx ON trafc.vw_summary_manualcount_sheet USING btree (year, depot, proc_road, "Count Type", tcname);
+CREATE INDEX IF NOT EXISTS vw_summary_manualcount_sheet_yearonly_idx ON trafc.vw_summary_manualcount_sheet USING btree (year);
+"""
+
+CONN = connect (
+        dbname = "gauteng",
+        user = "postgres",
+        host = "linearline.dedicated.co.za",
+        password = "Lin3@r1in3!431",
+        port="5432"
+    )
 
 SITE = [
     "node_id",
