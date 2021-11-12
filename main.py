@@ -29,8 +29,6 @@ class Count(object):
         self.path = path
         self.csv_export = csv_export
         self.sql_export = sql_export
-        print(csv_export)
-        print(sql_export)
 
     def choose(self, df, file):
         if self.type == "Basic Format":

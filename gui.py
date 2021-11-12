@@ -57,18 +57,14 @@ class Ui(QDialog):
         if b.text() == "Export to CSV":
             if b.isChecked() == True:
                 Ui.csv_export = True
-                print(Ui.csv_export)
             else:
                 Ui.csv_export = False
-                print(Ui.csv_export)
 
         if b.text() == "Export to PostgreSQL":
             if b.isChecked() == True:
                 Ui.sql_export = True
-                print(Ui.csv_export)
             else:
                 Ui.sql_export = False
-                print(Ui.sql_export)
 
     def activated(self, text):
         if text == "MANUAL TRAFFIC COUNTING SHEET - No Very Heavy Vehicles":
@@ -129,8 +125,9 @@ class Ui(QDialog):
     def popup_button(self, i):
         if i.text() == "OK":
             sys.exit()
-        else:
-            sys.exit()
+        elif i.text() == "Open":
+            OUTPATH = os.path.realpath(config.OUTPATH)
+            os.startfile(OUTPATH)
 
 
 class External(QThread):
