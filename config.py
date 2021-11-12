@@ -12,49 +12,14 @@ ENGINE = create_engine(
     r"postgresql://postgres:Lin3@r1in3!431@linearline.dedicated.co.za:5432/gauteng"
 )
 
-REFRESH_MATERIALIZED_VIEWS = """
-DROP INDEX IF EXISTS trafc.vw_detailed_manualcount_sheet_district_n_idx;
-DROP INDEX IF EXISTS trafc.vw_detailed_manualcount_sheet_id_idx;
-DROP INDEX IF EXISTS trafc.vw_detailed_manualcount_sheet_road_link_idx;
-DROP INDEX IF EXISTS trafc.vw_detailed_manualcount_sheet_tcname_idx;
-DROP INDEX IF EXISTS trafc.vw_detailed_manualcount_sheet_year_idx;
-DROP INDEX IF EXISTS trafc.vw_detailed_manualcount_sheet_yearonly_idx;
-DROP INDEX IF EXISTS trafc.vw_detailed_manualcount_uix;
 
-DROP INDEX trafc.vw_summary_manualcount_sheet_district_n_idx;
-DROP INDEX trafc.vw_summary_manualcount_sheet_id_idx;
-DROP INDEX trafc.vw_summary_manualcount_sheet_road_link_idx;
-DROP INDEX trafc.vw_summary_manualcount_sheet_tcname_idx;
-DROP INDEX trafc.vw_summary_manualcount_sheet_year_idx;
-DROP INDEX trafc.vw_summary_manualcount_sheet_yearonly_idx;
-
-REFRESH MATERIALIZED VIEW trafc.vw_detailed_manualcount_sheet WITH DATA;
-REFRESH MATERIALIZED VIEW trafc.vw_summary_manualcount_sheet WITH DATA;
-REFRESH MATERIALIZED VIEW trafc.station_total_s WITH DATA;
-
-CREATE INDEX IF NOT EXISTS vw_detailed_manualcount_sheet_district_n_idx ON trafc.vw_detailed_manualcount_sheet USING btree ("District_n");
-CREATE INDEX IF NOT EXISTS vw_detailed_manualcount_sheet_id_idx ON trafc.vw_detailed_manualcount_sheet USING btree (id);
-CREATE INDEX IF NOT EXISTS vw_detailed_manualcount_sheet_road_link_idx ON trafc.vw_detailed_manualcount_sheet USING btree (road_link);
-CREATE INDEX IF NOT EXISTS vw_detailed_manualcount_sheet_tcname_idx ON trafc.vw_detailed_manualcount_sheet USING btree (tcname);
-CREATE INDEX IF NOT EXISTS vw_detailed_manualcount_sheet_year_idx ON trafc.vw_detailed_manualcount_sheet USING btree (year, depot, proc_road, "Count Type", tcname);
-CREATE INDEX IF NOT EXISTS vw_detailed_manualcount_sheet_yearonly_idx ON trafc.vw_detailed_manualcount_sheet USING btree (year);
-CREATE UNIQUE INDEX IF NOT EXISTS vw_detailed_manualcount_uix ON trafc.vw_detailed_manualcount_sheet USING btree (tcname, count_hour);
-
-CREATE INDEX IF NOT EXISTS vw_summary_manualcount_sheet_district_n_idx ON trafc.vw_summary_manualcount_sheet USING btree ("District_n");
-CREATE INDEX IF NOT EXISTS vw_summary_manualcount_sheet_id_idx ON trafc.vw_summary_manualcount_sheet USING btree (id);
-CREATE INDEX IF NOT EXISTS vw_summary_manualcount_sheet_road_link_idx ON trafc.vw_summary_manualcount_sheet USING btree (road_link);
-CREATE INDEX IF NOT EXISTS vw_summary_manualcount_sheet_tcname_idx ON trafc.vw_summary_manualcount_sheet USING btree (tcname);
-CREATE INDEX IF NOT EXISTS vw_summary_manualcount_sheet_year_idx ON trafc.vw_summary_manualcount_sheet USING btree (year, depot, proc_road, "Count Type", tcname);
-CREATE INDEX IF NOT EXISTS vw_summary_manualcount_sheet_yearonly_idx ON trafc.vw_summary_manualcount_sheet USING btree (year);
-"""
-
-CONN = connect (
-        dbname = "gauteng",
-        user = "postgres",
-        host = "linearline.dedicated.co.za",
-        password = "Lin3@r1in3!431",
-        port="5432"
-    )
+CONN = connect(
+    dbname="gauteng",
+    user="postgres",
+    host="linearline.dedicated.co.za",
+    password="Lin3@r1in3!431",
+    port="5432",
+)
 
 SITE = [
     "node_id",
@@ -101,23 +66,23 @@ DATA = [
     "count_hour",
     "light",
     "heavy",
+    "veryheavy",
     "bus",
     "taxi",
     "total",
-    # "header_time",
     "header_date",
     "count_time",
     "header_id",
     "h_station_date",
-    "tcname"
+    "tcname",
 ]
 
 
 #############################################################
 
-KS_SAMPLE = [56, 247, 357, 481, 606, 738, 865, 1009, 1225, 1402, 1602, 1762]
+# KS_SAMPLE = [56, 247, 357, 481, 606, 738, 865, 1009, 1225, 1402, 1602, 1762]
 
-KS_SAMPLE2 = [100, 500, 1000, 2000, 5000, 7000, 9000, 10000, 15000, 20000, 30000, 45000]
+# KS_SAMPLE2 = [100, 500, 1000, 2000, 5000, 7000, 9000, 10000, 15000, 20000, 30000, 45000]
 
 # TEST_DATA ={
 #     "count_hour": ['06:00:00','07:00:00','08:00:00','09:00:00','10:00:00','11:00:00','12:00:00','13:00:00','14:00:00','15:00:00','16:00:00','17:00:00'],

@@ -89,6 +89,12 @@ class Ui_Dialog(object):
         self.runButton = QtWidgets.QPushButton(Dialog)
         self.runButton.setGeometry(QtCore.QRect(330, 510, 93, 28))
         self.runButton.setObjectName("runButton")
+        self.exportToCSV = QtWidgets.QCheckBox(Dialog)
+        self.exportToCSV.setGeometry(QtCore.QRect(10, 510, 101, 20))
+        self.exportToCSV.setObjectName("exportToCSV")
+        self.exportToSQL = QtWidgets.QCheckBox(Dialog)
+        self.exportToSQL.setGeometry(QtCore.QRect(140, 510, 171, 20))
+        self.exportToSQL.setObjectName("exportToSQL")
 
         self.retranslateUi(Dialog)
         self.buttonBox.accepted.connect(Dialog.accept)
@@ -104,4 +110,6 @@ class Ui_Dialog(object):
         self.simpleImportExample.setText(_translate("Dialog", "<html><head/><body><p><img src=\":/image/simpleImport_example.png\"/></p></body></html>"))
         self.label_2.setText(_translate("Dialog", "Choose a Folder (not a file)"))
         self.runButton.setText(_translate("Dialog", "Run"))
+        self.exportToCSV.setText(_translate("Dialog", "Export to CSV"))
+        self.exportToSQL.setText(_translate("Dialog", "Export to PostgreSQL"))
 import images_rc

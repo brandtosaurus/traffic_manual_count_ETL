@@ -14,7 +14,12 @@ import os
 import main
 import config
 
-TYPES = ["", "Detailed Manual Traffic Count Form", "Basic Format"]
+TYPES = [
+    "",
+    "Manual Traffic Counting Sheet - No Very Heavy Vehicles",
+    "Manual Traffic Counting Sheet",
+    "Basic Format",
+]
 
 
 class Ui(QDialog):
@@ -34,6 +39,12 @@ class Ui(QDialog):
         self.simpleImportExample.setPixmap(QPixmap(r"assets\simpleImport_example.png"))
         self.simpleImportExample.linkActivated.connect(self.activated)
 
+        self.exportToSQL.setChecked(True)
+        self.exportToCSV.setChecked(True)
+
+        self.exportToSQL.stateChanged.connect(lambda: self.btnstate(self.exportToSQL))
+        self.exportToCSV.stateChanged.connect(lambda: self.btnstate(self.exportToCSV))
+
         self.chooseDirectory.clicked.connect(self._open_file_dialog)
 
         self.runButton.clicked.connect(self.start)
@@ -42,8 +53,25 @@ class Ui(QDialog):
 
         self.progressBar.setValue(0)
 
+    def btnstate(self, b):
+        if b.text() == "Export to CSV":
+            if b.isChecked() == True:
+                Ui.csv_export = True
+                print(Ui.csv_export)
+            else:
+                Ui.csv_export = False
+                print(Ui.csv_export)
+
+        if b.text() == "Export to PostgreSQL":
+            if b.isChecked() == True:
+                Ui.sql_export = True
+                print(Ui.csv_export)
+            else:
+                Ui.sql_export = False
+                print(Ui.sql_export)
+
     def activated(self, text):
-        if text == "Detailed Manual Traffic Count Form":
+        if text == "MANUAL TRAFFIC COUNTING SHEET - No Very Heavy Vehicles":
             self.tchTrustImageExample.setStyleSheet(
                 "background-color: cyan; border: 3px solid red;"
             )
@@ -70,6 +98,9 @@ class Ui(QDialog):
         elif (Ui.path == "") or (Ui.path == None):
             self.error_dialogue = QErrorMessage()
             self.error_dialogue.showMessage("Please select a folder")
+        elif (Ui.csv_export == False) and (Ui.sql_export == False):
+            self.error_dialogue = QErrorMessage()
+            self.error_dialogue.showMessage("Please select an export type")
         else:
             self.thread = External()
             self.thread.countChanged.connect(self.onCountChanged)
@@ -81,25 +112,25 @@ class Ui(QDialog):
         self.progressBar.setValue(value)
 
     def show_popup(self):
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Information)
-        msg.setWindowText("Process")
-        msg.setText("Processing Complete")
-        msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Open)
-        msg.buttonClicked.connect(self.popup_button)
+        self.msg = QMessageBox()
+        self.msg.setIcon(QMessageBox.Information)
+        self.msg.setWindowText("Process")
+        self.msg.setText("Processing Complete")
+        self.msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Open)
+        self.msg.buttonClicked.connect(self.popup_button)
 
-        returnValue = msg.exec()
+        returnValue = self.msg.exec()
         if returnValue == QMessageBox.Ok:
             sys.exit()
         else:
             OUTPATH = os.path.realpath(config.OUTPATH)
             os.startfile(OUTPATH)
 
-    # def popup_button(self, i):
-    #     if i.text() == "OK":
-    #         sys.exit()
-    #     else:
-    #         sys.exit()
+    def popup_button(self, i):
+        if i.text() == "OK":
+            sys.exit()
+        else:
+            sys.exit()
 
 
 class External(QThread):
@@ -107,7 +138,7 @@ class External(QThread):
     countChanged = pyqtSignal(int)
 
     def run(self):
-        p = main.Count(str(Ui.type), str(Ui.path))
+        p = main.Count(str(Ui.type), str(Ui.path), Ui.csv_export, Ui.sql_export)
         src = p.getfiles(Ui.path)
         TOTAL = len(src)
         count = 0

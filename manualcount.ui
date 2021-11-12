@@ -221,6 +221,32 @@
     <string>Run</string>
    </property>
   </widget>
+  <widget class="QCheckBox" name="exportToCSV">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>510</y>
+     <width>101</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Export to CSV</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="exportToSQL">
+   <property name="geometry">
+    <rect>
+     <x>140</x>
+     <y>510</y>
+     <width>171</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Export to PostgreSQL</string>
+   </property>
+  </widget>
  </widget>
  <resources>
   <include location="assets/images.qrc"/>
