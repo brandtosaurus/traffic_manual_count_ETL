@@ -33,9 +33,9 @@ class Count(object):
     def choose(self, df, file):
         if self.type == "Basic Format":
             self.cumulative_etl(df, file)
-        elif (
-            self.type == "Manual Traffic Counting Sheet - No Very Heavy Vehicles"
-        ) and (df.loc[3, 5] == "Total"):
+        elif (self.type == "Manual Traffic Counting Sheet") and (
+            df.loc[3, 5] == "Total"
+        ):
             self.etl_no_veryheavy(df, file)
         elif (self.type == "Manual Traffic Counting Sheet") and (
             df.loc[3, 6] == "Total"
@@ -221,6 +221,14 @@ class Count(object):
 
             self.header_out_df = self.header_out_df.merge(header_temp, how="outer")
             self.data_out_df = self.data_out_df.merge(data, how="outer")
+            with open(
+                os.path.expanduser(config.FILES_COMPLETE),
+                "a",
+                newline="",
+            ) as f:
+                write = csv.writer(f)
+                write.writerows([[file]])
+
         else:
             with open(
                 os.path.expanduser(config.PROBLEM_FILES),
@@ -320,6 +328,14 @@ class Count(object):
 
             self.header_out_df = self.header_out_df.merge(header_temp, how="outer")
             self.data_out_df = self.data_out_df.merge(data, how="outer")
+            with open(
+                os.path.expanduser(config.FILES_COMPLETE),
+                "a",
+                newline="",
+            ) as f:
+                write = csv.writer(f)
+                write.writerows([[file]])
+
         else:
             with open(
                 os.path.expanduser(config.PROBLEM_FILES),
@@ -331,8 +347,6 @@ class Count(object):
             pass
 
     def execute(self, file):
-        if not os.path.exists(os.path.expanduser(config.OUTPATH)):
-            os.makedirs(os.path.expanduser(config.OUTPATH))
 
         # TODO: add sheet name to problem files output
         # for file in path:
@@ -414,6 +428,8 @@ class Count(object):
             except Exception:
                 print("""something went wrong with the DATA CSV EXPORT""")
                 pass
+        else:
+            pass
 
         if self.sql_export == True:
             try:
@@ -453,6 +469,8 @@ class Count(object):
                     or something on the database side. check the triggers on the manual_count_data table"""
                 )
                 pass
+        else:
+            pass
 
 
 # if __name__ == "__main__":

@@ -11,12 +11,13 @@ from PyQt5 import uic
 import sys
 import os
 
+import pandas as pd
+
 import calcs
 import config
 
 TYPES = [
     "",
-    "Manual Traffic Counting Sheet - No Very Heavy Vehicles",
     "Manual Traffic Counting Sheet",
     "Basic Format",
 ]
@@ -67,7 +68,7 @@ class Ui(QDialog):
                 Ui.sql_export = False
 
     def activated(self, text):
-        if text == "MANUAL TRAFFIC COUNTING SHEET - No Very Heavy Vehicles":
+        if text == "Manual Traffic Counting Sheet":
             self.tchTrustImageExample.setStyleSheet(
                 "background-color: cyan; border: 3px solid red;"
             )
@@ -119,15 +120,15 @@ class Ui(QDialog):
         if returnValue == QMessageBox.Ok:
             sys.exit()
         else:
-            OUTPATH = os.path.realpath(config.OUTPATH)
-            os.startfile(OUTPATH)
+            OUT = os.path.realpath(config.OUTPATH)
+            os.startfile(OUT)
 
     def popup_button(self, i):
         if i.text() == "OK":
             sys.exit()
         elif i.text() == "Open":
-            OUTPATH = os.path.realpath(config.OUTPATH)
-            os.startfile(OUTPATH)
+            OUT = os.path.realpath(config.OUTPATH)
+            os.startfile(OUT)
 
 
 class External(QThread):
@@ -135,12 +136,32 @@ class External(QThread):
     countChanged = pyqtSignal(int)
 
     def run(self):
+        if not os.path.exists(os.path.expanduser(config.OUTPATH)):
+            os.makedirs(os.path.expanduser(config.OUTPATH))
+
+        if not os.path.exists(os.path.expanduser(config.FILES_COMPLETE)):
+            with open(
+                os.path.expanduser(config.FILES_COMPLETE),
+                "w",
+            ) as f:
+                pass
+
+        fileComplete = os.path.expanduser(config.FILES_COMPLETE)
+        try:
+            fileComplete = pd.read_csv(fileComplete, header=None, sep="\n")
+            fileComplete = fileComplete[0].tolist()
+        except Exception:
+            fileComplete = []
+
         p = calcs.Count(str(Ui.type), str(Ui.path), Ui.csv_export, Ui.sql_export)
         src = p.getfiles(Ui.path)
         TOTAL = len(src)
         count = 0
+
+        files = [i for i in src if i not in fileComplete]
+
         while count < TOTAL:
-            for file in src:
+            for file in files:
                 count += 1
                 p.execute(file)
                 self.countChanged.emit(int(count / TOTAL * 100))

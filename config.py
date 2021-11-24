@@ -6,15 +6,14 @@ OUTPATH = r"~\Desktop\Temp\manual_traffic_counts"
 HEADEROUT = r"~\Desktop\Temp\manual_traffic_counts\header_import.csv"
 DATAOUT = r"~\Desktop\Temp\manual_traffic_counts\data_import.csv"
 PROBLEM_FILES = r"~\Desktop\Temp\manual_traffic_counts\PROBLEM_FILES.csv"
+FILES_COMPLETE = r"~\Desktop\Temp\manual_traffic_counts\COMPLETED_FILES.csv"
 DROP_IF = ["DO NOT FILL IN", "DO NOT F"]
 
-ENGINE = create_engine(
-    r"postgresql://postgres:Lin3@r1in3!431@linearline.dedicated.co.za:5432/gauteng"
-)
+# ENGINE = create_engine(
+#     r"postgresql://postgres:Lin3@r1in3!431@linearline.dedicated.co.za:5432/gauteng"
+# )
 
-LOCALHOST_ENGINE = create_engine(
-    r"postgresql://postgres:Lin3@r1in3!431@localhost:5432/gauteng"
-)
+ENGINE = create_engine(r"postgresql://postgres:Lin3@r1in3!431@localhost:5432/gauteng")
 
 
 CONN = connect(
@@ -122,4 +121,3 @@ DATA = [
 #     "no_of_hours":,
 #     "no_days":
 # }
-	
