@@ -9,20 +9,20 @@ PROBLEM_FILES = r"~\Desktop\Temp\manual_traffic_counts\PROBLEM_FILES.csv"
 FILES_COMPLETE = r"~\Desktop\Temp\manual_traffic_counts\COMPLETED_FILES.csv"
 DROP_IF = ["DO NOT FILL IN", "DO NOT F"]
 
-# ENGINE = create_engine(
-#     r"postgresql://postgres:Lin3@r1in3!431@linearline.dedicated.co.za:5432/gauteng"
-# )
-
-ENGINE = create_engine(r"postgresql://postgres:Lin3@r1in3!431@localhost:5432/gauteng")
-
-
-CONN = connect(
-    dbname="gauteng",
-    user="postgres",
-    host="linearline.dedicated.co.za",
-    password="Lin3@r1in3!431",
-    port="5432",
+ENGINE = create_engine(
+    r"postgresql://postgres:Lin3@r1in3!431@linearline.dedicated.co.za:5432/gauteng"
 )
+
+# ENGINE = create_engine(r"postgresql://postgres:Lin3@r1in3!431@localhost:5432/gauteng")
+
+
+# CONN = connect(
+#     dbname="gauteng",
+#     user="postgres",
+#     host="linearline.dedicated.co.za",
+#     password="Lin3@r1in3!431",
+#     port="5432"
+# )
 
 SITE = [
     "node_id",
@@ -121,3 +121,4 @@ DATA = [
 #     "no_of_hours":,
 #     "no_days":
 # }
+

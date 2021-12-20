@@ -69,9 +69,18 @@ class Count(object):
             return df
 
     def check_if_calculated(self, data):
-        a = data["total"]
+        a = pd.Series(data["total"])
         normalized_df = (a - a.min()) / (a.max() - a.min())
-        if (normalized_df.head(1).all() == 0) & (normalized_df.tail(1).all() == 1):
+        l = []
+        cnt = a.count()
+        for i in range(cnt):
+            if i == 0:
+                l.append(True)
+            elif (a.iloc[i] >= a.iloc[i-1]):
+                l.append(True)
+            else:
+                l.append(False)
+        if ((normalized_df.iloc[0] == 0) & (normalized_df.iloc[-1] == 1)) and all(element == True for element in l):
             return self.hourly_count_calc(data)
         else:
             return data
@@ -230,6 +239,7 @@ class Count(object):
                 write.writerows([[file]])
 
         else:
+            print("something wrong with the NO VERY HEAVY PROCESS")
             with open(
                 os.path.expanduser(config.PROBLEM_FILES),
                 "a",
@@ -246,12 +256,15 @@ class Count(object):
         # df = pd.read_excel(file, sheet_name=xls.sheet_names, header=None)
         # for key, df in df.items():
 
-        if df.loc[0, 0] == "MANUAL TRAFFIC COUNTING SHEET":
+        if (
+            df.loc[0, 0] == "MANUAL TRAFFIC COUNTING SHEET"
+            or df.loc[0, 0] == "TRAFFIC COUNTING SHEET"
+        ):
 
-            if pd.isnull(df.loc[23, 8]):
+            if pd.isnull(df.loc[23, 9]):
                 weather = "sunny"
             else:
-                weather = df.loc[23, 8]
+                weather = df.loc[23, 9]
 
             gid = str(uuid.uuid4())
 
@@ -337,6 +350,7 @@ class Count(object):
                 write.writerows([[file]])
 
         else:
+            print("something wrong with the TEMPLATE FORM method")
             with open(
                 os.path.expanduser(config.PROBLEM_FILES),
                 "a",
@@ -349,12 +363,13 @@ class Count(object):
     def execute(self, file):
 
         # TODO: add sheet name to problem files output
-        # for file in path:
+
         try:
             df = pd.read_excel(file, sheet_name=None, header=None)
             for key, df in df.items():
                 self.choose(df, file)
         except Exception:
+            print("something wrong with the EXECUTE method")
             with open(
                 os.path.expanduser(config.PROBLEM_FILES),
                 "a",

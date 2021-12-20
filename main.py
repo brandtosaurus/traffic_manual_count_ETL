@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import (
 from PyQt5 import uic
 import sys
 import os
+import csv
 
 import pandas as pd
 
@@ -95,9 +96,9 @@ class Ui(QDialog):
         elif (Ui.path == "") or (Ui.path == None):
             self.error_dialogue = QErrorMessage()
             self.error_dialogue.showMessage("Please select a folder")
-        elif (Ui.csv_export == False) and (Ui.sql_export == False):
-            self.error_dialogue = QErrorMessage()
-            self.error_dialogue.showMessage("Please select an export type")
+        # elif (Ui.csv_export == False) and (Ui.sql_export == False):
+        #     self.error_dialogue = QErrorMessage()
+        #     self.error_dialogue.showMessage("Please select an export type")
         else:
             self.thread = External()
             self.thread.countChanged.connect(self.onCountChanged)
@@ -111,7 +112,7 @@ class Ui(QDialog):
     def show_popup(self):
         self.msg = QMessageBox()
         self.msg.setIcon(QMessageBox.Information)
-        self.msg.setWindowText("Process")
+        self.msg.setWindowTitle("Process")
         self.msg.setText("Processing Complete")
         self.msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Open)
         self.msg.buttonClicked.connect(self.popup_button)
@@ -153,18 +154,26 @@ class External(QThread):
         except Exception:
             fileComplete = []
 
-        p = calcs.Count(str(Ui.type), str(Ui.path), Ui.csv_export, Ui.sql_export)
+        p = calcs.Count(str(Ui.type), str(Ui.path), True, True)
         src = p.getfiles(Ui.path)
         TOTAL = len(src)
-        count = 0
 
         files = [i for i in src if i not in fileComplete]
 
+        count = 0
         while count < TOTAL:
             for file in files:
                 count += 1
                 p.execute(file)
                 self.countChanged.emit(int(count / TOTAL * 100))
+                with open(
+                    os.path.expanduser(config.FILES_COMPLETE),
+                    "a",
+                    newline="",
+                ) as f:
+                    write = csv.writer(f)
+                    write.writerows([[file]])
+
         p.export()
 
 
