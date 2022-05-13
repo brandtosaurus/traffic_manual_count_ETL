@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+import sqlalchemy as sa
 from psycopg2 import connect, sql
 
 
@@ -9,8 +9,24 @@ PROBLEM_FILES = r"~\Desktop\Temp\manual_traffic_counts\PROBLEM_FILES.csv"
 FILES_COMPLETE = r"~\Desktop\Temp\manual_traffic_counts\COMPLETED_FILES.csv"
 DROP_IF = ["DO NOT FILL IN", "DO NOT F"]
 
-ENGINE = create_engine(
-    r"postgresql://postgres:Lin3@r1in3!431@linearline.dedicated.co.za:5432/gauteng"
+#### DB CONNECTION
+DB_NAME = "gauteng"
+DB_USER = "postgres"
+DB_PASS = "Lin3@r1in3!431"
+DB_HOST = "linearline.dedicated.co.za"
+DB_PORT = "5432"
+
+ENGINE_URL = sa.engine.URL.create(
+    "postgresql",
+    username=DB_USER,
+    password=DB_PASS,
+    host=DB_HOST,
+    port=DB_PORT,
+    database=DB_NAME,
+)
+
+ENGINE = sa.create_engine(
+    ENGINE_URL
 )
 
 # ENGINE = create_engine(r"postgresql://postgres:Lin3@r1in3!431@localhost:5432/gauteng")

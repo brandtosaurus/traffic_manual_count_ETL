@@ -30,19 +30,33 @@ class Count(object):
         self.csv_export = csv_export
         self.sql_export = sql_export
 
-    def choose(self, df, file):
-        if self.type == "Basic Format":
-            self.cumulative_etl(df, file)
-        elif (self.type == "Manual Traffic Counting Sheet") and (
-            df.loc[3, 5] == "Total"
-        ):
-            self.etl_no_veryheavy(df, file)
-        elif (self.type == "Manual Traffic Counting Sheet") and (
-            df.loc[3, 6] == "Total"
-        ):
-            self.etl_template_form(df, file)
-        else:
-            pass
+    def choose(self, df, file, key):
+        try:
+            if self.type == "Basic Format":
+                print("calculating using cumulative_etl")
+                self.cumulative_etl(df, file)
+            elif (self.type == "Manual Traffic Counting Sheet") and (
+                df.loc[3, 5] == "Total"
+            ):
+                print("calculating using etl_no_veryheavy")
+                self.etl_no_veryheavy(df, file)
+            elif (self.type == "Manual Traffic Counting Sheet") and (
+                df.loc[3, 6] == "Total"
+            ):
+                print("calculating using etl_template_form")
+                self.etl_template_form(df, file)
+            else:
+                pass
+        except Exception as e:
+                print("something wrong with the CHOOSE method: " + e)
+                with open(
+                    os.path.expanduser(config.PROBLEM_FILES),
+                    "a",
+                    newline="",
+                ) as f:
+                    write = csv.writer(f)
+                    write.writerows([[file + '-' + key]])
+                pass
 
     def getfiles(self, path) -> List[str]:
         print("COLLECTING FILES......")
@@ -54,6 +68,14 @@ class Count(object):
                     src.append(p)
         src = list(set(src))
         return src
+
+    def get_completed_files(self):
+        completed_list = []
+        with open(r"C:\Users\MB2705851\Desktop\Temp\manual_traffic_counts\COMPLETED_FILES.csv", "r") as f:
+            reader = csv.reader(f, delimiter="\t")
+            for row in reader:
+                completed_list.append(row[0])
+        return completed_list
 
     # ! process data so that count is only for that hour (not cumulative)
     def hourly_count_calc(self, df):
@@ -69,21 +91,27 @@ class Count(object):
             return df
 
     def check_if_calculated(self, data):
+        print("checking if calculated")
         a = pd.Series(data["total"])
-        normalized_df = (a - a.min()) / (a.max() - a.min())
-        l = []
-        cnt = a.count()
-        for i in range(cnt):
-            if i == 0:
-                l.append(True)
-            elif (a.iloc[i] >= a.iloc[i-1]):
-                l.append(True)
-            else:
-                l.append(False)
-        if ((normalized_df.iloc[0] == 0) & (normalized_df.iloc[-1] == 1)) and all(element == True for element in l):
-            return self.hourly_count_calc(data)
-        else:
+        avg = a.max() - a.min()
+        if avg == 0:
             return data
+        else:
+            normalized_df = (a - a.min()) / avg
+            l = []
+            cnt = a.count()
+            for i in range(cnt):
+                if i == 0:
+                    l.append(True)
+                elif (a.iloc[i] >= a.iloc[i-1]):
+                    l.append(True)
+                else:
+                    l.append(False)
+            if ((normalized_df.iloc[0] == 0) & (normalized_df.iloc[-1] == 1)) and all(element == True for element in l):
+                return self.hourly_count_calc(data)
+            else:
+                return data
+        
 
     def cumulative_etl(self, df, file) -> pd.DataFrame:
 
@@ -91,7 +119,7 @@ class Count(object):
         # xls = pd.ExcelFile(file)
         # df = pd.read_excel(file, sheet_name=xls.sheet_names, header=None)
         # for key, df in df.items():
-
+        
         header = {
             "header_id": [str(uuid.uuid4())],
             "document_url": file,
@@ -105,7 +133,8 @@ class Count(object):
             "count_interval": [60],
         }
         header_temp = pd.DataFrame(header)
-        self.header_out_df = self.header_out_df.merge(header_temp, how="outer")
+        header_temp = header_temp.dropna(axis=1, how = 'all')
+        self.header_out_df = pd.concat([self.header_out_df,header_temp], join='outer', axis=0, ignore_index=True)
         # self.header_out_df = self.header_out_df.drop_duplicates()
 
         data = df.loc[6:24, 0:5]
@@ -139,8 +168,11 @@ class Count(object):
         data["header_date"] = header_temp.loc[0, "count_date_start"]
 
         data = self.check_if_calculated(data)
-        self.data_out_df = self.data_out_df.merge(data, how="outer")
+        data = data.dropna(axis=1, how = 'all')
+        self.data_out_df = pd.concat([self.data_out_df,data], join='outer', axis=0, ignore_index=True)
         self.data_out_df = self.data_out_df.drop_duplicates()
+
+
 
     def etl_no_veryheavy(self, df, file) -> pd.DataFrame:
 
@@ -149,7 +181,7 @@ class Count(object):
         # df = pd.read_excel(file, sheet_name=xls.sheet_names, header=None)
         # for key, df in df.items():
 
-        if df.loc[0, 0] == "MANUAL TRAFFIC COUNTING SHEET":
+        try:
 
             if pd.isnull(df.loc[23, 8]):
                 weather = "sunny"
@@ -228,18 +260,14 @@ class Count(object):
             else:
                 pass
 
-            self.header_out_df = self.header_out_df.merge(header_temp, how="outer")
-            self.data_out_df = self.data_out_df.merge(data, how="outer")
-            with open(
-                os.path.expanduser(config.FILES_COMPLETE),
-                "a",
-                newline="",
-            ) as f:
-                write = csv.writer(f)
-                write.writerows([[file]])
+            header_temp = header_temp.dropna(axis=1, how = 'all')
+            data = data.dropna(axis=1, how = 'all')
 
-        else:
-            print("something wrong with the NO VERY HEAVY PROCESS")
+            self.header_out_df = pd.concat([self.header_out_df,header_temp], join='outer', axis=0, ignore_index=True)
+            self.data_out_df = pd.concat([self.data_out_df,data], join='outer', axis=0, ignore_index=True)
+
+        except Exception as e:
+            print("something wrong with the NO VERY HEAVY PROCESS" + e)
             with open(
                 os.path.expanduser(config.PROBLEM_FILES),
                 "a",
@@ -250,16 +278,13 @@ class Count(object):
             pass
 
     def etl_template_form(self, df, file) -> pd.DataFrame:
-
+        print("processing etl_template_form")
         ## UNCOMMENT THIS WHEN WORKING WITH FILES
         # xls = pd.ExcelFile(file)
         # df = pd.read_excel(file, sheet_name=xls.sheet_names, header=None)
         # for key, df in df.items():
 
-        if (
-            df.loc[0, 0] == "MANUAL TRAFFIC COUNTING SHEET"
-            or df.loc[0, 0] == "TRAFFIC COUNTING SHEET"
-        ):
+        try:
 
             if pd.isnull(df.loc[23, 9]):
                 weather = "sunny"
@@ -339,18 +364,14 @@ class Count(object):
             else:
                 pass
 
-            self.header_out_df = self.header_out_df.merge(header_temp, how="outer")
-            self.data_out_df = self.data_out_df.merge(data, how="outer")
-            with open(
-                os.path.expanduser(config.FILES_COMPLETE),
-                "a",
-                newline="",
-            ) as f:
-                write = csv.writer(f)
-                write.writerows([[file]])
+            header_temp = header_temp.dropna(axis=1, how = 'all')
+            data = data.dropna(axis=1, how = 'all')
 
-        else:
-            print("something wrong with the TEMPLATE FORM method")
+            self.header_out_df = pd.concat([self.header_out_df,header_temp], join='outer', axis=0, ignore_index=True)
+            self.data_out_df = pd.concat([self.data_out_df,data], join='outer', axis=0, ignore_index=True)
+
+        except Exception as e:
+            print("something wrong with the TEMPLATE FORM method :"+ e)
             with open(
                 os.path.expanduser(config.PROBLEM_FILES),
                 "a",
@@ -361,23 +382,27 @@ class Count(object):
             pass
 
     def execute(self, file):
-
-        # TODO: add sheet name to problem files output
-
-        try:
-            df = pd.read_excel(file, sheet_name=None, header=None)
-            for key, df in df.items():
-                self.choose(df, file)
-        except Exception:
-            print("something wrong with the EXECUTE method")
-            with open(
-                os.path.expanduser(config.PROBLEM_FILES),
-                "a",
-                newline="",
-            ) as f:
-                write = csv.writer(f)
-                write.writerows([[file]])
-            pass
+        df = pd.read_excel(file, sheet_name=None, header=None)
+        for key, df in df.items():
+            l = self.get_completed_files()
+            if file + '-' + key in l:
+                pass
+            else:
+                try:
+                    print("busy with: " + file + '-' + key)
+                    self.choose(df, file, key)
+                    with open(os.path.expanduser(config.FILES_COMPLETE),"a",newline="",) as f:
+                        write = csv.writer(f)
+                        write.writerows([[file + '-' + key]])
+                except Exception as e:
+                    with open(
+                    os.path.expanduser(config.PROBLEM_FILES),
+                        "a",
+                        newline="",
+                    ) as f:
+                        write = csv.writer(f)
+                        write.writerows([[file]])
+                    pass
 
     def psql_insert_copy(self, table, conn, keys, data_iter):
         """
@@ -422,11 +447,11 @@ class Count(object):
                 "type_of_count",
                 "description",
                 "no_days",
-            ]
+            ], errors='ignore'
         )
 
         self.data_out_df = self.data_out_df.drop(
-            columns=["header_date", "count_time", "header_id"]
+            columns=["header_date", "count_time", "header_id"], errors='ignore'
         )
         if self.csv_export == True:
             try:

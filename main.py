@@ -41,11 +41,14 @@ class Ui(QDialog):
         self.simpleImportExample.setPixmap(QPixmap(r"assets\simpleImport_example.png"))
         self.simpleImportExample.linkActivated.connect(self.activated)
 
-        self.exportToSQL.setChecked(True)
-        self.exportToCSV.setChecked(True)
+        self.exportToSQL.setChecked(False)
+        self.exportToCSV.setChecked(False)
 
         self.exportToSQL.stateChanged.connect(lambda: self.btnstate(self.exportToSQL))
         self.exportToCSV.stateChanged.connect(lambda: self.btnstate(self.exportToCSV))
+
+        # self.exportToSQL.stateChanged.connect(self.checkBoxChangedActionSQL)
+        # self.exportToCSV.stateChanged.connect(self.checkBoxChangedActionCSV)
 
         self.chooseDirectory.clicked.connect(self._open_file_dialog)
 
@@ -55,18 +58,35 @@ class Ui(QDialog):
 
         self.progressBar.setValue(0)
 
+        self.type = ""
+        self.path = ""
+        self.csv_export = False
+        self.sql_export = False
+
+    # def checkBoxChangedActionSQL(self, state):
+    #     if (Qt.Checked == state):
+    #         self.sql_export = True
+    #     else:
+    #         self.sql_export = False
+
+    # def checkBoxChangedActionCSV(self, state):
+    #     if (Qt.Checked == state):
+    #         self.csv_export = True
+    #     else:
+    #         self.csv_export = False 
+
     def btnstate(self, b):
         if b.text() == "Export to CSV":
             if b.isChecked() == True:
-                Ui.csv_export = True
+                self.csv_export = True
             else:
-                Ui.csv_export = False
+                self.csv_export = False
 
         if b.text() == "Export to PostgreSQL":
             if b.isChecked() == True:
-                Ui.sql_export = True
+                self.sql_export = True
             else:
-                Ui.sql_export = False
+                self.sql_export = False
 
     def activated(self, text):
         if text == "Manual Traffic Counting Sheet":
@@ -79,28 +99,28 @@ class Ui(QDialog):
                 "background-color: cyan; border: 3px solid red;"
             )
             self.tchTrustImageExample.setStyleSheet("background-color: rgba(0,0,0,0%)")
-        Ui.type = str(self.typeComboBox.currentText())
+        self.type = str(self.typeComboBox.currentText())
 
     def _open_file_dialog(self):
         path = str(QFileDialog.getExistingDirectory())
         self.textBar.setText("{}".format(path))
-        Ui.path = self.textBar.text()
+        self.path = self.textBar.text()
 
     def exit(self):
         sys.exit(app.exec_())
 
     def start(self):
-        if (Ui.type == "") or (Ui.type == None):
+        if (self.type == "") or (self.type == None):
             self.error_dialogue = QErrorMessage()
             self.error_dialogue.showMessage("Please select a type")
-        elif (Ui.path == "") or (Ui.path == None):
+        elif (self.path == "") or (self.path == None):
             self.error_dialogue = QErrorMessage()
             self.error_dialogue.showMessage("Please select a folder")
-        # elif (Ui.csv_export == False) and (Ui.sql_export == False):
-        #     self.error_dialogue = QErrorMessage()
-        #     self.error_dialogue.showMessage("Please select an export type")
+        elif (self.csv_export == False) and (self.sql_export == False):
+            self.error_dialogue = QErrorMessage()
+            self.error_dialogue.showMessage("Please select an export type")
         else:
-            self.thread = External()
+            self.thread = External(self.type, self.path, self.csv_export, self.sql_export)
             self.thread.countChanged.connect(self.onCountChanged)
             self.thread.start()
             self.runButton.setEnabled(False)
@@ -133,8 +153,15 @@ class Ui(QDialog):
 
 
 class External(QThread):
-
+    
     countChanged = pyqtSignal(int)
+
+    def __init__(self, type, path, csv_export, sql_export, parent=None):
+        super(QThread, self).__init__()
+        self.type = type
+        self.path = path
+        self.csv_export = csv_export
+        self.sql_export = sql_export
 
     def run(self):
         if not os.path.exists(os.path.expanduser(config.OUTPATH)):
@@ -154,26 +181,26 @@ class External(QThread):
         except Exception:
             fileComplete = []
 
-        p = calcs.Count(str(Ui.type), str(Ui.path), True, True)
-        src = p.getfiles(Ui.path)
+        print(str(self.type), str(self.path), self.csv_export, self.sql_export)
+        p = calcs.Count(str(self.type), str(self.path), self.csv_export, self.sql_export)
+        src = p.getfiles(self.path)
         TOTAL = len(src)
-
-        files = [i for i in src if i not in fileComplete]
+        print("number of files: " + str(TOTAL))
+        # files = [i for i in src if i not in fileComplete]
+        # print("number of files not complete: " + len(files))
 
         count = 0
         while count < TOTAL:
-            for file in files:
+            for file in src:
                 count += 1
+                print("busy with: " + file)
                 p.execute(file)
                 self.countChanged.emit(int(count / TOTAL * 100))
-                with open(
-                    os.path.expanduser(config.FILES_COMPLETE),
-                    "a",
-                    newline="",
-                ) as f:
-                    write = csv.writer(f)
-                    write.writerows([[file]])
 
+        h = p.header_out_df
+        d = p.data_out_df
+        print(h)
+        print(d)
         p.export()
 
 
