@@ -29,6 +29,8 @@ class Count(object):
         self.path = path
         self.csv_export = csv_export
         self.sql_export = sql_export
+        self.header_cols = list(pd.read_sql_query("""SELECT * FROM trafc.manual_count_header limit 1;""", config.ENGINE).columns)
+        self.data_cols = list(pd.read_sql_query("""SELECT * FROM trafc.manual_count_data limit 1;""", config.ENGINE).columns)
 
     def choose(self, df, file, key):
         try:
@@ -112,7 +114,6 @@ class Count(object):
             else:
                 return data
         
-
     def cumulative_etl(self, df, file) -> pd.DataFrame:
 
         ## UNCOMMENT THIS WHEN WORKING WITH FILES
@@ -171,8 +172,6 @@ class Count(object):
         data = data.dropna(axis=1, how = 'all')
         self.data_out_df = pd.concat([self.data_out_df,data], join='outer', axis=0, ignore_index=True)
         self.data_out_df = self.data_out_df.drop_duplicates()
-
-
 
     def etl_no_veryheavy(self, df, file) -> pd.DataFrame:
 
@@ -437,22 +436,9 @@ class Count(object):
         self.header_out_df = self.header_out_df.drop_duplicates()
         self.data_out_df = self.data_out_df.drop_duplicates()
 
-        self.header_out_df = self.header_out_df.drop(
-            columns=[
-                "header_id",
-                "latitude",
-                "longitude",
-                "kilometer_dist",
-                "road_link",
-                "type_of_count",
-                "description",
-                "no_days",
-            ], errors='ignore'
-        )
+        self.header_out_df = self.header_out_df[self.header_out_df.intersection(self.header_cols)]
+        self.data_out_df = self.data_out_df[self.data_out_df.intersection(self.data_cols)]
 
-        self.data_out_df = self.data_out_df.drop(
-            columns=["header_date", "count_time", "header_id"], errors='ignore'
-        )
         if self.csv_export == True:
             try:
                 # EXPORT AS CSV
