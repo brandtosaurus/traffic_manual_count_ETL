@@ -337,7 +337,6 @@ class Count(object):
 
             data = df.loc[4:29, 0:6]
             data = data[(data[0] != "Subtotal A") & (data[0] != "Subtotal B")]
-            data = data.dropna(thresh=5)
             data.rename(
                 columns={
                     0: "count_hour",
@@ -350,22 +349,29 @@ class Count(object):
                 },
                 inplace=True,
             )
-            data["count_hour"] = data["count_hour"].str[:2]
-            if data['count_hour'].isnull().values.any():
-                try:
-                    data['count_hour'] = data['count_hour'].ffill().astype(int)
-                    duplicateRows = data[data.duplicated(['count_hour'])]
-                    data.at[duplicateRows.index[0],'count_hour'] = data.at[duplicateRows.index[0],'count_hour']+1
-                    data['count_hour'] = data['count_hour'].astype(str)
-                    data['count_hour'] = data['count_hour'].apply(lambda x: '0'+x if len(x)==1 else x)
-                except:
-                    data['count_hour'] = data['count_hour'].bfill().astype(int)
-                    duplicateRows = data[data.duplicated(['count_hour'])]
-                    data.at[duplicateRows.index[0],'count_hour'] = data.at[duplicateRows.index[0]-1,'count_hour']-1
-                    data['count_hour'] = data['count_hour'].astype(str)
-                    data['count_hour'] = data['count_hour'].apply(lambda x: '0'+x if len(x)==1 else x)
-            else:
-                pass
+            n=0
+            for index, row in data.iterrows():
+                row['count_hour'] = str(n)
+                n += 1
+            data['count_hour'] = data['count_hour'].apply(lambda x: '0'+x if len(x)==1 else x)
+            data = data.dropna(thresh=5)
+
+            # data["count_hour"] = data["count_hour"].str[:2]
+            # if data['count_hour'].isnull().values.any():
+            #     try:
+            #         data['count_hour'] = data['count_hour'].ffill().astype(int)
+            #         duplicateRows = data[data.duplicated(['count_hour'])]
+            #         data.at[duplicateRows.index[0],'count_hour'] = data.at[duplicateRows.index[0],'count_hour']+1
+            #         data['count_hour'] = data['count_hour'].astype(str)
+            #         data['count_hour'] = data['count_hour'].apply(lambda x: '0'+x if len(x)==1 else x)
+            #     except:
+            #         data['count_hour'] = data['count_hour'].bfill().astype(int)
+            #         duplicateRows = data[data.duplicated(['count_hour'])]
+            #         data.at[duplicateRows.index[0],'count_hour'] = data.at[duplicateRows.index[0]-1,'count_hour']-1
+            #         data['count_hour'] = data['count_hour'].astype(str)
+            #         data['count_hour'] = data['count_hour'].apply(lambda x: '0'+x if len(x)==1 else x)
+            # else:
+            #     pass
 
             data["h_station_date"] = header_temp.loc[0, "h_station_date"]
             data["tcname"] = header_temp.loc[0, "tc_station_name"]
